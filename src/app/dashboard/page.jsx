@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Clock, Calendar, Play, RotateCcw, Printer, Zap, TrendingUp, Target } from "lucide-react";
 import Navbar from "@/Components/Navbar/Navbar";
+import ShowResult from "@/Components/ShowResult/ShowResult";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -220,8 +221,15 @@ const totalPoints = points.reduce((a, b) => a + b, 0);
         <div>
             <Navbar/>
         </div>
+    
+
+      <div>
+        <ShowResult/>
+      </div>
+
       {/* Enhanced Draw Header */}
       <div className="w-full flex justify-between items-center p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl backdrop-blur-sm">
+
         <div className="flex gap-3">
           {[
             { key: "10-19", label: "F7 (10-19)" },
@@ -432,73 +440,78 @@ const totalPoints = points.reduce((a, b) => a + b, 0);
 
           {/* Enhanced Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-700/50">
-                  {range(0, 9).map((n) => (
-                    <th
-                      key={n}
-                      className="p-3 text-center text-sm font-bold text-purple-300 bg-slate-800/30 first:rounded-tl-lg last:rounded-tr-lg border-r border-slate-700/30 last:border-r-0"
-                    >
-                      0{n}
-                    </th>
-                  ))}
-                  <th className="p-3 text-center text-sm font-bold text-yellow-300 bg-slate-800/30 border-r border-slate-700/30">
-                    Quantity
-                  </th>
-                  <th className="p-3 text-center text-sm font-bold text-pink-300 bg-slate-800/30 rounded-tr-lg">
-                    Points
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {range(0, 9).map((row) => (
-                  <tr key={row} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
-                    {range(0, 9).map((col) => (
-                      <td key={col} className="p-2 text-center border-r border-slate-700/20 last:border-r-0">
-                        <input
-                          type="text"
-                          className="w-16 h-10 rounded-lg bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400"
-                          maxLength={2}
-                          value={grid[row][col]}
-                          onChange={(e) =>
-                            handleGridChange(row, col, e.target.value)
-                          }
-                        />
-                      </td>
-                    ))}
-                    {/* Enhanced Quantity and Points */}
-                    <td className="p-2 text-center border-r border-slate-700/20">
-                      <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
-                        {quantities[row]}
-                      </div>
-                    </td>
-                    <td className="p-2 text-center">
-                      <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
-                        {points[row]}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {/* Enhanced Totals Row */}
-                <tr className="bg-slate-800/40 border-t-2 border-purple-500/50">
-                  <td colSpan={10} className="p-2 text-center font-bold text-purple-300">
-                    TOTALS
-                  </td>
-                  <td className="p-2 text-center">
-                    <div className="font-extrabold text-xl text-yellow-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-yellow-500/50">
-                      {totalQuantity}
-                    </div>
-                  </td>
-                  <td className="p-2 text-center">
-                    <div className="font-extrabold text-xl text-pink-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-pink-500/50">
-                      {totalPoints}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+  <table className="w-full">
+    <thead>
+      <tr className="border-b border-slate-700/50">
+        {/* Create a blank header row to align with input boxes */}
+        {range(0, 9).map((n) => (
+          <th
+            key={n}
+            className="p-3 text-center text-sm font-bold text-purple-300 bg-slate-800/30 first:rounded-tl-lg last:rounded-tr-lg border-r border-slate-700/30 last:border-r-0"
+          >
+            {/* Blank for column headers */}
+          </th>
+        ))}
+        <th className="p-3 text-center text-sm font-bold text-yellow-300 bg-slate-800/30 border-r border-slate-700/30">
+          Quantity
+        </th>
+        <th className="p-3 text-center text-sm font-bold text-pink-300 bg-slate-800/30 rounded-tr-lg">
+          Points
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {range(0, 9).map((row) => (
+        <tr key={row} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
+          {range(0, 9).map((col) => (
+            <td key={col} className="p-2 text-center border-r border-slate-700/20 last:border-r-0">
+              {/* Display Index Above each Input Box */}
+              <div className="text-sm text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
+              <input
+                type="text"
+                className="w-16 h-10 rounded-lg bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400"
+                maxLength={2}
+                value={grid[row][col]}
+                onChange={(e) =>
+                  handleGridChange(row, col, e.target.value)
+                }
+              />
+            </td>
+          ))}
+          {/* Enhanced Quantity and Points */}
+          <td className="p-2 text-center border-r border-slate-700/20">
+            <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
+              {quantities[row]}
+            </div>
+          </td>
+          <td className="p-2 text-center">
+            <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
+              {points[row]}
+            </div>
+          </td>
+        </tr>
+      ))}
+      {/* Enhanced Totals Row */}
+      <tr className="bg-slate-800/40 border-t-2 border-purple-500/50">
+        <td colSpan={10} className="p-2 text-center font-bold text-purple-300">
+          TOTALS
+        </td>
+        <td className="p-2 text-center">
+          <div className="font-extrabold text-xl text-yellow-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-yellow-500/50">
+            {totalQuantity}
           </div>
+        </td>
+        <td className="p-2 text-center">
+          <div className="font-extrabold text-xl text-pink-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-pink-500/50">
+            {totalPoints}
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
 
           {/* Enhanced Footer */}
           <div className="flex items-center mt-8 gap-4 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">

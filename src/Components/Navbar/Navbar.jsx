@@ -1,28 +1,17 @@
-"use client"
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, User, Trophy, Ticket, Target, Bell } from "lucide-react";
-import ShowResult from "../ShowResult/ShowResult";
+import { ChevronDown, ChevronUp, User, Trophy, Ticket, Target } from "lucide-react";
 
 const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const dropdownRef = useRef();
-  const notifRef = useRef();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
-
-  // Close dropdowns if clicked outside
+  // Close dropdown if clicked outside
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setNotifOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -30,8 +19,7 @@ const Navbar = () => {
   }, []);
 
   return (
-    <div>
-      <nav className="flex items-center justify-between px-8 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl border-b border-slate-700/50 relative z-20 backdrop-blur-sm">
+    <nav className="flex items-center justify-between px-8 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl border-b border-slate-700/50 relative z-20 backdrop-blur-sm">
       {/* Left: Game Info */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
@@ -61,16 +49,6 @@ const Navbar = () => {
 
       {/* Right: Action Buttons */}
       <div className="flex items-center gap-3">
-        {/* Show Result Button */}
-<button
-  className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-200 focus:outline-none hover:shadow-purple-500/25 hover:scale-105 active:scale-95 font-semibold text-base"
-  style={{ minWidth: 140 }}
-  onClick={openModal}
->
-  Show Result
-</button>
-
-
         {/* Profile Dropdown */}
         <div ref={dropdownRef} className="relative">
           <button
@@ -93,20 +71,12 @@ const Navbar = () => {
           {/* Dropdown Menu */}
           {dropdownOpen && (
             <div className="absolute right-0 mt-3 w-52 rounded-2xl shadow-2xl bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-purple-500/50 overflow-hidden animate-fade-in backdrop-blur-md">
-              {[
-                { name: "Reprint", href: "/reprint" },
-                { name: "Result", href: "/result" },
-                { name: "Cancel", href: "/cancel" },
-                { name: "Password", href: "/password" },
-                { name: "Logout", href: "/" },
-              ].map((item, idx) => (
+              {[{ name: "Reprint", href: "/reprint" }, { name: "Result", href: "/result" }, { name: "Cancel", href: "/cancel" }, { name: "Password", href: "/password" }, { name: "Logout", href: "/" }].map((item, idx) => (
                 <a
                   key={item.name}
                   href={item.href}
                   className={`block px-6 py-4 text-slate-200 hover:bg-gradient-to-r hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-200 font-medium border-b border-slate-800/50 last:border-none relative overflow-hidden group ${
-                    idx === 5
-                      ? "text-red-400 hover:text-red-300"
-                      : "hover:text-white"
+                    idx === 5 ? "text-red-400 hover:text-red-300" : "hover:text-white"
                   }`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
@@ -135,9 +105,6 @@ const Navbar = () => {
         }
       `}</style>
     </nav>
-
-    <ShowResult isOpen={isModalOpen} isClose={closeModal}/>
-    </div>
   );
 };
 
