@@ -65,17 +65,63 @@ export default function Page() {
       .map(() => Array(3).fill(false))
   );
   const [activeFilter, setActiveFilter] = useState(null);
-  const [grid, setGrid] = useState(
-    Array(10)
-      .fill(null)
-      .map(() => Array(10).fill(""))
-  );
+
+  const [activeTypeFilter, setActiveTypeFilter] = useState(null); // 'all', 'odd', 'even', 'fp', or null
+  const [activeColFilter, setActiveColFilter] = useState(null);   // '10-19', '30-39', '50-59', or null
+
 
   // Constant Quantity and Points for demo (change values as needed)
 const [quantities] = useState([2, 5, 7, 4, 6, 3, 1, 8, 9, 2]);
 const [points] = useState([25, 50, 35, 44, 12, 62, 30, 49, 55, 21]);
 const totalQuantity = quantities.reduce((a, b) => a + b, 0);
 const totalPoints = points.reduce((a, b) => a + b, 0);
+
+
+const COLS = 10, ROWS = 10; // or 9 if that's your grid size
+
+const [columnHeaders, setColumnHeaders] = useState(Array(COLS).fill(""));
+const [rowHeaders, setRowHeaders] = useState(Array(ROWS).fill(""));
+const [grid, setGrid] = useState(Array(ROWS).fill().map(() => Array(COLS).fill("")));
+const [cellOverrides, setCellOverrides] = useState({});
+
+// Handlers:
+const handleColumnHeaderChange = (col, value) => {
+  if (!/^\d*$/.test(value)) return;
+
+  setColumnHeaders(headers =>
+    headers.map((v, i) => (i === col ? value : v))
+  );
+
+  // Remove overrides for this column
+  setCellOverrides(overrides => {
+    const updated = { ...overrides };
+    Object.keys(updated).forEach(key => {
+      const [row, column] = key.split("-");
+      if (parseInt(column, 10) === col) delete updated[key];
+    });
+    return updated;
+  });
+};
+
+const handleRowHeaderChange = (row, value) => {
+  if (!/^\d*$/.test(value)) return;
+
+  setRowHeaders(headers =>
+    headers.map((v, i) => (i === row ? value : v))
+  );
+
+  // Remove overrides for this row
+  setCellOverrides(overrides => {
+    const updated = { ...overrides };
+    Object.keys(updated).forEach(key => {
+      const [r, column] = key.split("-");
+      if (parseInt(r, 10) === row) delete updated[key];
+    });
+    return updated;
+  });
+};
+
+
 
 
   // --- Timer logic ---
@@ -139,82 +185,83 @@ const totalPoints = points.reduce((a, b) => a + b, 0);
   }, [activeFilter]);
 
   // --- Column/Range Filters for F7/F8/F9 --- //
-  const handleFilter = (type) => {
-    let colIdx = null;
-    if (type === "10-19") colIdx = 0;
-    if (type === "30-39") colIdx = 1;
-    if (type === "50-59") colIdx = 2;
-
-    if (activeFilter === type) {
-      setSelected(
-        Array(10)
-          .fill(null)
-          .map(() => Array(3).fill(false))
-      );
-      setActiveFilter(null);
-      return;
-    }
-    const newSelected = Array(10)
-      .fill(null)
-      .map(() => Array(3).fill(false));
-    if (colIdx !== null) {
-      for (let row = 0; row < 10; row++) {
-        newSelected[row][colIdx] = true;
-      }
-    }
-    setSelected(newSelected);
-    setActiveFilter(type);
-  };
-
-  const handleOddEvenFP = (type) => {
-  if (activeFilter === type) {
-    setSelected(
-      Array(10)
-        .fill(null)
-        .map(() => Array(3).fill(false))
-    );
-    setActiveFilter(null);
+const handleFilter = (colKey) => {
+  if (activeColFilter === colKey) {
+    setActiveColFilter(null);
+    if (!activeTypeFilter) resetCheckboxes();
+    else applyFilter(activeTypeFilter, null);
     return;
   }
-  const newSelected = Array(10)
-    .fill(null)
-    .map(() => Array(3).fill(false));
-  for (let row = 0; row < 10; row++) {
-    for (let col = 0; col < 3; col++) {
-      const num = allNumbers[col][row];
-      if (
-        (type === "all") ||
-        (type === "even" && isEven(num)) ||
-        (type === "odd" && isOdd(num)) ||
-        (type === "fp" && isPrime(num))
-      ) {
-        newSelected[row][col] = true;
-      }
-    }
+  setActiveColFilter(colKey);
+  applyFilter(activeTypeFilter, colKey);
+};
+
+const handleOddEvenFP = (type) => {
+  if (activeTypeFilter === type) {
+    setActiveTypeFilter(null);
+    // If both filters are off, reset all
+    if (!activeColFilter) resetCheckboxes();
+    else applyFilter(null, activeColFilter);
+    return;
   }
-  setSelected(newSelected);
-  setActiveFilter(type);
+  setActiveTypeFilter(type);
+  applyFilter(type, activeColFilter);
 };
 
 
-  const resetCheckboxes = () => {
-    setSelected(
-      Array(10)
-        .fill(null)
-        .map(() => Array(3).fill(false))
-    );
-    setActiveFilter(null);
-  };
 
-  const handleGridChange = (row, col, value) => {
-    if (/^\d{0,2}$/.test(value)) {
-      setGrid((prev) => {
-        const copy = prev.map((arr) => arr.slice());
-        copy[row][col] = value;
-        return copy;
-      });
+  const resetCheckboxes = () => {
+  setSelected(Array(10).fill(null).map(() => Array(3).fill(false)));
+  setActiveTypeFilter(null);
+  setActiveColFilter(null);
+};
+
+
+const handleGridChange = (row, col, value) => {
+  if (!/^\d*$/.test(value)) return;
+
+  setCellOverrides(overrides => ({
+    ...overrides,
+    [`${row}-${col}`]: value
+  }));
+};
+
+
+function getCellValue(row, col) {
+  const key = `${row}-${col}`;
+  if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
+    return cellOverrides[key];
+  }
+
+  const rowValue = parseInt(rowHeaders[row] || "0", 10);
+  const colValue = parseInt(columnHeaders[col] || "0", 10);
+  const sum = rowValue + colValue;
+  return sum === 0 ? "" : sum; // Display empty if sum is zero, else sum
+}
+
+function applyFilter(type, colKey) {
+  const colIndexes = { "10-19": 0, "30-39": 1, "50-59": 2 };
+  const newSelected = Array(10).fill(null).map(() => Array(3).fill(false));
+
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 3; col++) {
+      const num = allNumbers[col][row];
+      let matchType = false;
+
+      if (!type || type === "all") matchType = true;
+      else if (type === "even") matchType = isEven(num);
+      else if (type === "odd") matchType = isOdd(num);
+      else if (type === "fp") matchType = isPrime(num);
+
+      let matchCol = !colKey || col === colIndexes[colKey];
+
+      if (matchType && matchCol) newSelected[row][col] = true;
     }
-  };
+  }
+  setSelected(newSelected);
+}
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -452,63 +499,90 @@ const totalPoints = points.reduce((a, b) => a + b, 0);
             {/* Blank for column headers */}
           </th>
         ))}
-        <th className="p-3 text-center text-sm font-bold text-yellow-300 bg-slate-800/30 border-r border-slate-700/30">
-          Quantity
-        </th>
-        <th className="p-3 text-center text-sm font-bold text-pink-300 bg-slate-800/30 rounded-tr-lg">
-          Points
-        </th>
+        
       </tr>
     </thead>
 
     <tbody>
-      {range(0, 9).map((row) => (
-        <tr key={row} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
-          {range(0, 9).map((col) => (
-            <td key={col} className="p-2 text-center border-r border-slate-700/20 last:border-r-0">
-              {/* Display Index Above each Input Box */}
-              <div className="text-sm text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
-              <input
-                type="text"
-                className="w-16 h-10 rounded-lg bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400"
-                maxLength={2}
-                value={grid[row][col]}
-                onChange={(e) =>
-                  handleGridChange(row, col, e.target.value)
-                }
-              />
-            </td>
-          ))}
-          {/* Enhanced Quantity and Points */}
-          <td className="p-2 text-center border-r border-slate-700/20">
-            <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
-              {quantities[row]}
-            </div>
-          </td>
-          <td className="p-2 text-center">
-            <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
-              {points[row]}
-            </div>
-          </td>
-        </tr>
+  {/* Column Header Input Row */}
+  <tr>
+    {/* Empty cell for row header corner */}
+    <td className="bg-transparent"></td>
+    {range(0, 9).map((col) => (
+      <td key={`col-header-${col}`} className="p-2 text-center border-r border-slate-700/20 last:border-r-0">
+        <input
+          type="text"
+          className="w-16 h-10 rounded-lg bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
+          maxLength={2}
+          value={columnHeaders[col]}
+  onChange={e => handleColumnHeaderChange(col, e.target.value)}
+        />
+      </td>
+    ))}
+    {/* Shift Quantity and Points right by one cell */}
+    <td className="bg-transparent"></td>
+    <td className="p-2 text-center font-bold text-yellow-400">Quantity</td>
+    <td className="p-2 text-center font-bold text-pink-400">Points</td>
+  </tr>
+  {/* Main Grid Rows */}
+  {range(0, 9).map((row) => (
+    <tr key={row} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
+      {/* Row Header Input */}
+      <td className="p-2 text-center border-r border-slate-700/20">
+        <input
+          type="text"
+          className="w-16 h-10 rounded-lg bg-lime-900/80 text-lime-200 border-2 border-lime-400/40 text-center font-bold shadow focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 outline-none transition-all duration-200 hover:border-lime-300"
+          maxLength={2}
+          value={rowHeaders[row]}
+  onChange={e => handleRowHeaderChange(row, e.target.value)}
+        />
+      </td>
+      {/* The actual grid */}
+      {range(0, 9).map((col) => (
+        <td key={col} className="p-2 text-center border-r border-slate-700/20 last:border-r-0">
+          <div className="text-sm text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
+          <input
+            type="text"
+            className="w-16 h-10 rounded-lg bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400"
+            maxLength={2}
+            value={getCellValue(row, col)}
+            onChange={e => handleGridChange(row, col, e.target.value)}
+          />
+        </td>
       ))}
-      {/* Enhanced Totals Row */}
-      <tr className="bg-slate-800/40 border-t-2 border-purple-500/50">
-        <td colSpan={10} className="p-2 text-center font-bold text-purple-300">
-          TOTALS
-        </td>
-        <td className="p-2 text-center">
-          <div className="font-extrabold text-xl text-yellow-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-yellow-500/50">
-            {totalQuantity}
-          </div>
-        </td>
-        <td className="p-2 text-center">
-          <div className="font-extrabold text-xl text-pink-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-pink-500/50">
-            {totalPoints}
-          </div>
-        </td>
-      </tr>
-    </tbody>
+      {/* Shift Quantity and Points right by one cell */}
+      <td className="bg-transparent"></td>
+      {/* Enhanced Quantity and Points */}
+      <td className="p-2 text-center border-r border-slate-700/20">
+        <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
+          {quantities[row]}
+        </div>
+      </td>
+      <td className="p-2 text-center">
+        <div className="w-18 h-10 rounded-lg bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
+          {points[row]}
+        </div>
+      </td>
+    </tr>
+  ))}
+  {/* Totals Row (unchanged) */}
+  <tr className="bg-slate-800/40 border-t-2 border-purple-500/50">
+    <td colSpan={10+2} className="p-2 text-center font-bold text-purple-300">
+      TOTALS
+    </td>
+    <td className="p-2 text-center">
+      <div className="font-extrabold text-xl text-yellow-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-yellow-500/50">
+        {totalQuantity}
+      </div>
+    </td>
+    <td className="p-2 text-center">
+      <div className="font-extrabold text-xl text-pink-400 bg-slate-900/50 px-4 py-2 rounded-lg border border-pink-500/50">
+        {totalPoints}
+      </div>
+    </td>
+  </tr>
+</tbody>
+
   </table>
 </div>
 
