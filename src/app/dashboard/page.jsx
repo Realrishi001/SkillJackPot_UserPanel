@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Clock, Calendar, Play, RotateCcw, Printer, Zap, TrendingUp, Target } from "lucide-react";
 import Navbar from "@/Components/Navbar/Navbar";
 import ShowResult from "@/Components/ShowResult/ShowResult";
+import { FP_SETS } from "@/data/fpSets";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -75,6 +76,8 @@ const [quantities] = useState([2, 5, 7, 4, 6, 3, 1, 8, 9, 2]);
 const [points] = useState([25, 50, 35, 44, 12, 62, 30, 49, 55, 21]);
 const totalQuantity = quantities.reduce((a, b) => a + b, 0);
 const totalPoints = points.reduce((a, b) => a + b, 0);
+const [isFPMode, setIsFPMode] = useState(false); 
+const [activeFPSetIndex, setActiveFPSetIndex] = useState(null);
 
 
 const COLS = 10, ROWS = 10; // or 9 if that's your grid size
@@ -220,11 +223,31 @@ const handleOddEvenFP = (type) => {
 const handleGridChange = (row, col, value) => {
   if (!/^\d*$/.test(value)) return;
 
-  setCellOverrides(overrides => ({
-    ...overrides,
-    [`${row}-${col}`]: value
-  }));
+  const numStr = String(row * 10 + col).padStart(2, "0");
+  if (isFPMode && activeFPSetIndex !== null && FP_SETS[activeFPSetIndex].includes(numStr)) {
+    // Update all cells in the active FP set
+    setCellOverrides(overrides => {
+      const updated = { ...overrides };
+      FP_SETS[activeFPSetIndex].forEach(setNum => {
+        // Find all cells in the grid matching this setNum
+        for (let r = 0; r < 10; r++) {
+          for (let c = 0; c < 10; c++) {
+            if (String(r * 10 + c).padStart(2, "0") === setNum) {
+              updated[`${r}-${c}`] = value;
+            }
+          }
+        }
+      });
+      return updated;
+    });
+  } else {
+    setCellOverrides(overrides => ({
+      ...overrides,
+      [`${row}-${col}`]: value
+    }));
+  }
 };
+
 
 
 function getCellValue(row, col) {
@@ -238,6 +261,11 @@ function getCellValue(row, col) {
   const sum = rowValue + colValue;
   return sum === 0 ? "" : sum; // Display empty if sum is zero, else sum
 }
+
+function getFPSetIndexForNumber(numStr) {
+  return FP_SETS.findIndex(set => set.includes(numStr));
+}
+
 
 function applyFilter(type, colKey) {
   const colIndexes = { "10-19": 0, "30-39": 1, "50-59": 2 };
@@ -361,15 +389,19 @@ function applyFilter(type, colKey) {
     Odd
   </button>
   <button
-    onClick={() => handleOddEvenFP("fp")}
-    className={`px-5 py-2.5 rounded-xl font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-      activeFilter === "fp"
-        ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-        : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
-    }`}
-  >
-    FP
-  </button>
+  onClick={() => {
+    setIsFPMode(fp => !fp);
+    setActiveFPSetIndex(null); // reset current set highlight on mode toggle
+    setActiveTypeFilter("fp");
+  }}
+  className={`px-5 py-2.5 rounded-xl font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+    isFPMode
+      ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
+      : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
+  }`}
+>
+  FP
+</button>
 </div>
 
           {/* Column Filters (F7, F8, F9) */}
@@ -542,12 +574,27 @@ function applyFilter(type, colKey) {
         <td key={col} className="p-2 text-center border-r border-slate-700/20 last:border-r-0">
           <div className="text-sm text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
           <input
-            type="text"
-            className="w-16 h-10 rounded-lg bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400"
-            maxLength={2}
-            value={getCellValue(row, col)}
-            onChange={e => handleGridChange(row, col, e.target.value)}
-          />
+  type="text"
+  className={`w-16 h-10 rounded-lg bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
+    ${
+      isFPMode && activeFPSetIndex !== null && FP_SETS[activeFPSetIndex].includes(String(row * 10 + col).padStart(2, "0"))
+        ? 'bg-green-600/80 border-green-300 ring-2 ring-green-300'
+        : ''
+    }
+  `}
+  maxLength={2}
+  value={getCellValue(row, col)}
+  onChange={e => handleGridChange(row, col, e.target.value)}
+  onClick={() => {
+    if (isFPMode) {
+      // Only when FP mode is ON
+      const numStr = String(row * 10 + col).padStart(2, "0");
+      const setIdx = getFPSetIndexForNumber(numStr);
+      setActiveFPSetIndex(setIdx !== -1 ? setIdx : null);
+    }
+  }}
+/>
+
         </td>
       ))}
       {/* Shift Quantity and Points right by one cell */}
