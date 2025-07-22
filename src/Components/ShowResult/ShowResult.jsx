@@ -43,7 +43,7 @@ function SlotNumber({ value, delay = 0 }) {
         justifyContent: "center",
         fontWeight: 700,
         fontFamily: "monospace",
-        fontSize: 20,
+        fontSize: "clamp(1.1rem, 3vw, 1.5rem)",
         letterSpacing: 1.5,
         color: "#fff",
         textShadow: "0 2px 6px #000d",
@@ -54,71 +54,6 @@ function SlotNumber({ value, delay = 0 }) {
   );
 }
 
-// Enhanced gold sparkle animated background
-const GoldBg = () => (
-  <>
-    <div
-      style={{
-        position: "fixed",
-        zIndex: 0,
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        pointerEvents: "none",
-        background: "radial-gradient(ellipse at center, #372a16 60%, #191202 100%)"
-      }}
-    />
-    <div className="slot-sparkle-bg" />
-    <style>{`
-      .slot-sparkle-bg {
-        position: fixed;
-        z-index: 0;
-        top: 0; left: 0; width: 100vw; height: 100vh;
-        pointer-events: none;
-        overflow: hidden;
-        background: none;
-      }
-      .slot-sparkle-bg::before,
-      .slot-sparkle-bg::after {
-        content: '';
-        position: absolute;
-        width: 120vw; height: 100vh;
-        top: 0; left: 0;
-        background: transparent;
-        pointer-events: none;
-        animation: sparkle-move 18s linear infinite;
-      }
-      .slot-sparkle-bg::before {
-        background-image:
-          radial-gradient(circle, #ffd700cc 0.5vw, #0000 0.7vw),
-          radial-gradient(circle, #fff5 0.22vw, #0000 0.38vw),
-          radial-gradient(circle, #ffd70088 0.16vw, #0000 0.26vw);
-        background-size: 12vw 8vh, 18vw 12vh, 15vw 10vh;
-        background-position: 0 0, 6vw 4vh, 3vw 2vh;
-        opacity: 0.52;
-        filter: blur(0.5px);
-        animation-delay: 0s;
-      }
-      .slot-sparkle-bg::after {
-        background-image:
-          radial-gradient(circle, #ffd70099 0.38vw, #0000 0.7vw),
-          radial-gradient(circle, #fff7 0.18vw, #0000 0.27vw),
-          radial-gradient(circle, #fffadf99 0.11vw, #0000 0.18vw);
-        background-size: 14vw 9vh, 20vw 13vh, 16vw 11vh;
-        background-position: 7vw 5vh, 2vw 1vh, 9vw 7vh;
-        opacity: 0.45;
-        filter: blur(0.9px);
-        animation-delay: 8s;
-      }
-      @keyframes sparkle-move {
-        from { transform: translateY(0);}
-        to { transform: translateY(-25vh);}
-      }
-    `}</style>
-  </>
-);
-
 // Generate numbers
 function generateRandomNumbers(count) {
   return Array.from({ length: count }, () => Math.floor(1000 + Math.random() * 9000));
@@ -127,23 +62,25 @@ function generateRandomNumbers(count) {
 // Enhanced gold/glossy slot machine frame with lever
 function CasinoSlotMachine({ rows, leverActive, onLeverPull, autoRefresh, setAutoRefresh, onManualRefresh, lastRefresh }) {
   return (
-    <div
-      style={{
-        position: "relative",
-        width: 1200,
-        minHeight: 480,
-        background: "linear-gradient(135deg, #2a200a 0%, #181510 100%)",
-        borderRadius: 48,
-        boxShadow: "0 12px 100px #000b, 0 0 25px #ffda9a55",
-        border: "6px solid #ffd700",
-        margin: "32px auto",
-        overflow: "visible",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 2,
-      }}
-    >
+<div
+  style={{
+    position: "relative",
+    width: "clamp(320px, 95vw, 1200px)",
+    minHeight: "clamp(240px, 40vw, 480px)",
+    background: "linear-gradient(135deg, #2a200a 0%, #181510 100%)",
+    borderRadius: "clamp(18px, 4vw, 48px)",
+    boxShadow: "0 12px 100px #000b, 0 0 25px #ffda9a55",
+    border: "clamp(3px, 0.5vw, 6px) solid #ffd700",
+    margin: "clamp(16px, 4vw, 32px) auto",
+    overflow: "visible",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+    border:'2px solid white',
+  }}
+>
+
       {/* Enhanced gold frame (outer) */}
       <div style={{
         position: "absolute", inset: 0,
@@ -244,23 +181,25 @@ function CasinoSlotMachine({ rows, leverActive, onLeverPull, autoRefresh, setAut
       </motion.div>
 
       {/* Main window (inside machine) - wider for horizontal layout */}
-      <div
-        style={{
-          position: "absolute",
-          left: 48,
-          right: 48,
-          top: 60,
-          bottom: 60,
-          background: "radial-gradient(ellipse at 50% 50%, #181e26 65%, #242328 100%)",
-          border: "4px solid #b4890b",
-          borderRadius: 32,
-          boxShadow: "0 2px 32px #000b, inset 0 0 20px #ffd70010",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 4,
-        }}
-      >
+<div
+  style={{
+    position: "absolute",
+    left: "clamp(8px, 3vw, 48px)",
+    right: "clamp(8px, 3vw, 48px)",
+    top: "clamp(10px, 5vw, 60px)",
+    bottom: "clamp(10px, 5vw, 60px)",
+    background: "radial-gradient(ellipse at 50% 50%, #181e26 65%, #242328 100%)",
+    border: "clamp(2px, 0.3vw, 4px) solid #b4890b",
+    borderRadius: "clamp(12px, 2.5vw, 32px)",
+    boxShadow: "0 2px 32px #000b, inset 0 0 20px #ffd70010",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 4,
+  }}
+>
+
+
         {/* 3 rows of 10 columns each */}
         <div
           style={{
@@ -284,26 +223,29 @@ function CasinoSlotMachine({ rows, leverActive, onLeverPull, autoRefresh, setAut
                 gap: 12,
                 alignItems: "center",
                 justifyContent: "center",
+                
               }}
             >
               {row.map((num, colIdx) => (
-                <div
-                  key={colIdx}
-                  style={{
-                    background: "linear-gradient(120deg, #efe3be 10%, #e7b100 90%)",
-                    border: "3px solid #ffd700",
-                    borderRadius: 18,
-                    boxShadow: "0 0 20px #ffd70025, inset 0 1px 0 #fff3",
-                    width: 95,
-                    height: 80,
-                    padding: 6,
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
-                  }}
-                >
+<div
+  key={colIdx}
+  style={{
+    background: "linear-gradient(120deg, #efe3be 10%, #e7b100 90%)",
+    border: "clamp(1.5px, 0.25vw, 3px) solid #ffd700",
+    borderRadius: "clamp(8px, 1.7vw, 18px)",
+    boxShadow: "0 0 20px #ffd70025, inset 0 1px 0 #fff3",
+    width: "clamp(38px, 7.5vw, 95px)",
+    height: "clamp(32px, 6.5vw, 80px)",
+    padding: "clamp(2px, 1vw, 6px)",
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  }}
+>
+
+
                   {/* Enhanced gloss effect */}
                   <div
                     style={{
@@ -344,6 +286,7 @@ function CasinoSlotMachine({ rows, leverActive, onLeverPull, autoRefresh, setAut
                       justifyContent: "center",
                       position: "relative",
                       zIndex: 3,
+                      
                     }}
                   >
                     <SlotNumber value={num} delay={rowIdx * 150 + colIdx * 50} />
@@ -398,72 +341,7 @@ function CasinoSlotMachine({ rows, leverActive, onLeverPull, autoRefresh, setAut
           zIndex: 9,
         }}
       >
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onManualRefresh}
-          disabled={leverActive}
-          style={{
-            padding: "12px 28px",
-            fontWeight: "bold",
-            fontSize: 18,
-            background: leverActive 
-              ? "linear-gradient(90deg, #ccc 30%, #ddd 90%)"
-              : "linear-gradient(90deg, #ffd700 30%, #ffe472 90%)",
-            color: leverActive ? "#666" : "#7c4900",
-            border: "none",
-            borderRadius: 16,
-            boxShadow: leverActive 
-              ? "0 2px 8px #00000020"
-              : "0 4px 20px #FFD70030, 0 0 15px #FFD70020",
-            letterSpacing: 1,
-            cursor: leverActive ? "not-allowed" : "pointer",
-            outline: "none",
-            borderTop: leverActive ? "2.5px solid #eee" : "2.5px solid #fff8",
-            transition: "all .3s ease",
-            opacity: leverActive ? 0.7 : 1,
-          }}
-        >
-          {leverActive ? "Spinning..." : "🎰 Refresh"}
-        </motion.button>
-        
-        <label
-          style={{
-            color: "#fff9",
-            fontWeight: 600,
-            fontSize: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "rgba(50,50,58,0.8)",
-            borderRadius: 9999,
-            padding: "8px 20px",
-            border: "1.5px solid #ffd70060",
-            boxShadow: "0 2px 12px #ffd70015",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={autoRefresh}
-            onChange={e => setAutoRefresh(e.target.checked)}
-            style={{ accentColor: "#ffd700", width: 18, height: 18 }}
-          />
-          ⚡ Auto Refresh
-        </label>
-        
-        {lastRefresh && (
-          <div style={{ 
-            color: "#a89b76", 
-            fontSize: 14,
-            background: "rgba(40,40,48,0.7)",
-            padding: "6px 12px",
-            borderRadius: 8,
-            border: "1px solid #ffd70030"
-          }}>
-            🕐 Last: {lastRefresh}
-          </div>
-        )}
+
       </div>
     </div>
   );
@@ -506,8 +384,8 @@ export default function ShowResult() {
   return (
     <div
       style={{
-        minHeight: "100vh",
-        minWidth: "100vw",
+        minHeight: "fit",
+        minWidth: "fit",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -516,7 +394,6 @@ export default function ShowResult() {
         overflow: "hidden",
       }}
     >
-      <GoldBg />
       <div style={{ 
         width: "100%", 
         display: "flex", 
@@ -525,7 +402,7 @@ export default function ShowResult() {
         zIndex: 2,
         padding: "20px"
       }}>
-        <div style={{ margin: "0 auto" }}>
+        <div style={{ margin: "0 auto"}}>
           <CasinoSlotMachine
             rows={rows}
             leverActive={leverActive}
@@ -537,49 +414,7 @@ export default function ShowResult() {
           />
         </div>
         
-        {/* Enhanced footer */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          style={{
-            background: "rgba(32,36,54,0.75)",
-            borderRadius: "9999px",
-            padding: "0.6rem 2rem",
-            border: "1.5px solid #373f63",
-            fontSize: "1rem",
-            color: "#b0bec5",
-            marginTop: 30,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "10px",
-            boxShadow: "0 4px 16px #ffd70025",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          <motion.span 
-            animate={{
-              boxShadow: [
-                "0 0 8px #34d39990",
-                "0 0 15px #34d399ff",
-                "0 0 8px #34d39990"
-              ]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity
-            }}
-            style={{
-              display: "inline-block",
-              width: 10,
-              height: 10,
-              background: "#34d399",
-              borderRadius: "50%",
-              marginRight: 8,
-            }} 
-          />
-          🔄 Numbers refresh every 15 minutes automatically
-        </motion.div>
+       
       </div>
     </div>
   );
