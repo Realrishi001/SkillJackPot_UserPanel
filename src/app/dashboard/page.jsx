@@ -5,6 +5,8 @@ import { Clock, Calendar, Play, RotateCcw, Printer, Zap, TrendingUp, Target } fr
 import Navbar from "@/Components/Navbar/Navbar";
 import ShowResult from "@/Components/ShowResult/ShowResult";
 import { FP_SETS } from "@/data/fpSets";
+import axios from 'axios'
+import { DRAW_TIMES } from "@/data/drawTimes";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -78,7 +80,7 @@ const totalQuantity = quantities.reduce((a, b) => a + b, 0);
 const totalPoints = points.reduce((a, b) => a + b, 0);
 const [isFPMode, setIsFPMode] = useState(false); 
 const [activeFPSetIndex, setActiveFPSetIndex] = useState(null);
-
+const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRAW_TIMES));
 
 
 const COLS = 10, ROWS = 10; // or 9 if that's your grid size
@@ -139,12 +141,22 @@ const handleRowHeaderChange = (row, value) => {
     return () => clearInterval(timerRef.current);
   }, []);
 
-  useEffect(() => {
-    if (remainSecs === 0) {
-      setTimerEnd(15 * 60);
-      setRemainSecs(15 * 60);
-    }
-  }, [remainSecs]);
+ useEffect(() => {
+  if (remainSecs === 0) {
+    setTimerEnd(15 * 60);
+    setRemainSecs(15 * 60);
+    setCurrentDrawSlot(getNextDrawSlot(DRAW_TIMES)); // Update draw slot
+  }
+}, [remainSecs]);
+
+// update the slots every 5 seconds to keep checking
+useEffect(() => {
+  const interval = setInterval(() => {
+    setCurrentDrawSlot(getNextDrawSlot(DRAW_TIMES));
+  }, 5000); // check every 5 seconds
+  return () => clearInterval(interval);
+}, []);
+
 
   const min = String(Math.floor(remainSecs / 60)).padStart(2, "0");
   const sec = String(remainSecs % 60).padStart(2, "0");
@@ -205,6 +217,10 @@ const toggle = (row, col) => {
         e.preventDefault();
         handleFilter("50-59");
       }
+      if (e.key === "F6") {
+        e.preventDefault();
+        handlePrint();
+      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -261,6 +277,44 @@ useEffect(() => {
   console.log("Updated quantity:", updatedQuantity);
 
 }, [quantities, cellOverrides]);
+
+useEffect(() => {
+  let ticketList = [];
+
+  // 1. Get all selected numbers (from checkboxes)
+  let selectedNumbers = [];
+  for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
+    for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
+      if (selected[rowIdx][colIdx]) {
+        selectedNumbers.push(allNumbers[colIdx][rowIdx]);
+      }
+    }
+  }
+
+  // 2. Get all input cells with values
+  let filledCells = [];
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 10; col++) {
+      const key = `${row}-${col}`;
+      const value = cellOverrides[key];
+      if (value && value !== "") {
+        // This is the fix:
+        const cellNum = row * 10 + col;
+        filledCells.push({ cellIndex: String(cellNum).padStart(2, "0"), value });
+      }
+    }
+  }
+
+  // 3. For every selected number and every filled input, create the ticket
+  selectedNumbers.forEach(num => {
+    filledCells.forEach(cell => {
+      ticketList.push(`${num}-${cell.cellIndex} : ${cell.value}`);
+    });
+  });
+
+  console.log("Selected Ticket Numbers:", ticketList);
+}, [selected, cellOverrides]);
+
 
 
 const handleGridChange = (row, col, value) => {
@@ -350,6 +404,90 @@ function applyFilter(type, colKey) {
   setSelected(newSelected);
 }
 
+
+function getLoginIdFromToken() {
+  const token = localStorage.getItem('userToken');
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.id;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getFormattedDateTime() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+
+// to print and save the data
+const handlePrint = async () => {
+  // 1. Gather ticket numbers in your required format
+  let ticketList = [];
+  let selectedNumbers = [];
+  for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
+    for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
+      if (selected[rowIdx][colIdx]) {
+        selectedNumbers.push(allNumbers[colIdx][rowIdx]);
+      }
+    }
+  }
+  let filledCells = [];
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 10; col++) {
+      const key = `${row}-${col}`;
+      const value = cellOverrides[key];
+      if (value && value !== "") {
+        const cellNum = row * 10 + col;
+        filledCells.push({ cellIndex: String(cellNum).padStart(2, "0"), value });
+      }
+    }
+  }
+  selectedNumbers.forEach(num => {
+    filledCells.forEach(cell => {
+      ticketList.push(`${num}-${cell.cellIndex} : ${cell.value}`);
+    });
+  });
+
+  // 2. Get loginId from JWT
+  const loginId = getLoginIdFromToken();
+  if (!loginId) {
+    alert("User not logged in.");
+    return;
+  }
+
+  // 3. Get current date and time (formatted)
+  const gameTime = getFormattedDateTime();
+
+  // 4. Prepare data payload
+const payload = {
+  gameTime,
+  ticketNumber: ticketList.join(', '), // or as array if backend accepts
+  totalQuatity: totalUpdatedQuantity,
+  totalPoints: totalUpdatedPoints,
+  loginId,
+  drawTime: currentDrawSlot, // <-- add this line
+};
+
+
+  // 5. Send data to backend
+  try {
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`, payload);
+    if (response.status === 201) {
+      alert("Tickets saved successfully!");
+      // Optional: Reset your form/grid here
+    } else {
+      alert("Failed to save tickets: " + (response.data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert("Error saving tickets: " + (error?.response?.data?.message || error.message));
+  }
+};
+
+
 // Calculate total value (sum of all input boxes)
 let totalValue = 0;
 Object.values(cellOverrides).forEach(v => {
@@ -362,6 +500,32 @@ Object.values(cellOverrides).forEach(v => {
 const updatedQuantity = quantities.map(q => totalValue * q);
 
 const updatedPoints = updatedQuantity.map(q => q * 2);
+
+const totalUpdatedQuantity = updatedQuantity.reduce((sum, val) => sum + val, 0);
+const totalUpdatedPoints = updatedPoints.reduce((sum, val) => sum + val, 0);
+
+
+// draw point function
+function getNextDrawSlot(drawTimes) {
+  const now = new Date();
+  const timeObjects = drawTimes.map(timeStr => {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+    if (modifier === "PM" && hours !== 12) hours += 12;
+    if (modifier === "AM" && hours === 12) hours = 0;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+  });
+
+  for (let i = 0; i < timeObjects.length; i++) {
+    if (now < timeObjects[i]) {
+      return drawTimes[i];
+    }
+  }
+  // If no future slot, return first slot of the next day
+  return drawTimes[0];
+}
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -415,7 +579,7 @@ const updatedPoints = updatedQuantity.map(q => q * 2);
     <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 rounded-xl border border-green-500/30 w-full sm:w-auto">
       <Play className="w-5 h-5 text-green-400" />
       <span className="text-sm sm:text-lg font-bold text-green-400">Draw Time</span>
-      <span className="text-lg sm:text-xl font-mono font-bold text-red-400">{drawTime}</span>
+      <span className="text-lg sm:text-xl font-mono font-bold text-red-400">{currentDrawSlot}</span>
     </div>
     <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 rounded-xl border border-green-500/30 w-full sm:w-auto">
       <Calendar className="w-5 h-5 text-green-400" />
@@ -550,7 +714,9 @@ const updatedPoints = updatedQuantity.map(q => q * 2);
 
     {/* Enhanced Action Buttons */}
     <div className="flex gap-3 mt-6">
-      <button className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95">
+      <button className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95"
+      onClick={handlePrint}
+      >
         <Printer className="w-5 h-5" />
         Print
       </button>
@@ -576,12 +742,12 @@ const updatedPoints = updatedQuantity.map(q => q * 2);
       <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-yellow-500/30">
         <Target className="w-4 h-4 text-yellow-400" />
         <span className="text-yellow-400 font-medium">Total Quantity:</span>
-        <span className="font-bold text-white">0</span>
+        <span className="font-bold text-white">{totalUpdatedQuantity}</span>
       </div>
       <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-pink-500/30">
         <TrendingUp className="w-4 h-4 text-pink-400" />
         <span className="text-pink-400 font-medium">Total Points:</span>
-        <span className="font-bold text-white">0</span>
+        <span className="font-bold text-white">{totalUpdatedPoints}</span>
       </div>
     </div>
   </div>
@@ -685,12 +851,12 @@ const updatedPoints = updatedQuantity.map(q => q * 2);
           </td>
           <td className="p-1 text-center">
             <div className="font-extrabold text-lg text-yellow-400 bg-slate-900/50 px-3 py-2 rounded-lg border border-yellow-500/50">
-              0
+              {totalUpdatedQuantity}
             </div>
           </td>
           <td className="p-1 text-center">
             <div className="font-extrabold text-lg text-pink-400 bg-slate-900/50 px-3 py-2 rounded-lg border border-pink-500/50">
-              0
+              {totalUpdatedPoints}
             </div>
           </td>
         </tr>
