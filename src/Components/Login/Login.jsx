@@ -26,7 +26,7 @@ const Login = () => {
 
     try {
       const res = await axios.post(
-        `http://localhost:3085/api/login-admin`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/login-admin`,
         {
           userName: name,
           password: password
