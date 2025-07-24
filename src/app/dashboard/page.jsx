@@ -6,7 +6,7 @@ import Navbar from "../../Components/Navbar/Navbar.jsx";
 import ShowResult from "../../Components/ShowResult/ShowResult";
 import { FP_SETS } from "../../data/fpSets";
 import axios from 'axios'
-import { DRAW_TIMES } from "@/data/drawTimes";
+import { DRAW_TIMES } from "../../data/drawTimes";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -89,6 +89,11 @@ const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRA
   const [rowHeaders, setRowHeaders] = useState(Array(ROWS).fill(""));
   const [grid, setGrid] = useState(Array(ROWS).fill().map(() => Array(COLS).fill("")));
   const [cellOverrides, setCellOverrides] = useState({});
+  const [showAdvanceDrawModal, setShowAdvanceDrawModal] = useState(false);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+
+
 
   // Handlers:
   const handleRowHeaderChange = (row, value) => {
@@ -292,6 +297,8 @@ const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRA
       }
     }
 
+    
+
     // 2. Get all input cells with values
     let filledCells = [];
     for (let row = 0; row < 10; row++) {
@@ -424,69 +431,183 @@ const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRA
   }
 
 
-  // to print and save the data
-  const handlePrint = async () => {
-    // 1. Gather ticket numbers in your required format
-    let ticketList = [];
-    let selectedNumbers = [];
-    for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
-      for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
-        if (selected[rowIdx][colIdx]) {
-          selectedNumbers.push(allNumbers[colIdx][rowIdx]);
-        }
-      }
-    }
-    let filledCells = [];
-    for (let row = 0; row < 10; row++) {
-      for (let col = 0; col < 10; col++) {
-        const key = `${row}-${col}`;
-        const value = cellOverrides[key];
-        if (value && value !== "") {
-          const cellNum = row * 10 + col;
-          filledCells.push({ cellIndex: String(cellNum).padStart(2, "0"), value });
-        }
-      }
-    }
-    selectedNumbers.forEach(num => {
-      filledCells.forEach(cell => {
-        ticketList.push(`${num}-${cell.cellIndex} : ${cell.value}`);
-      });
-    });
+  const generatePrintReceipt = (data, ticketId) => {
+  // Create a new jsPDF instance
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
 
-    // 2. Get loginId from JWT
-    const loginId = getLoginIdFromToken();
-    if (!loginId) {
-      alert("User not logged in.");
-      return;
+    format: [80, 297] // 80mm width for thermal printer
+  });
+
+  // Set font
+  pdf.setFontSize(10);
+  
+  // Header
+  pdf.text('Skill Jackpot', 40, 10, { align: 'center' });
+  pdf.setFontSize(8);
+  pdf.text('This game for Adults Amusement Only', 40, 15, { align: 'center' });
+  pdf.text('GST No Issued by Govt of India', 40, 20, { align: 'center' });
+  pdf.text('GST No: In Process', 40, 25, { align: 'center' });
+  pdf.text(`Date: ${data.gameTime}`, 40, 30, { align: 'center' });
+  
+  // Add a line
+  pdf.setLineWidth(0.5);
+  pdf.line(5, 33, 75, 33);
+  
+  // Game Time
+  pdf.setFontSize(9);
+  pdf.text(`Game Time:- ${data.drawTime}`, 5, 38);
+  pdf.text(`Login Id: ${data.loginId}`, 5, 43);
+  
+  // Add line
+  pdf.line(5, 45, 75, 45);
+  
+  // Ticket Numbers in grid format
+  let yPos = 50;
+  const ticketArray = data.ticketNumber.split(', ');
+  
+  // Group tickets by row (3 per row as shown in image)
+  for (let i = 0; i < ticketArray.length; i += 3) {
+    let rowText = '';
+    for (let j = 0; j < 3 && i + j < ticketArray.length; j++) {
+      const ticket = ticketArray[i + j];
+      // Format each ticket to fit nicely
+      const formattedTicket = ticket.substring(0, 18); // Limit length
+      rowText += formattedTicket.padEnd(25, ' ');
     }
-
-    // 3. Get current date and time (formatted)
-    const gameTime = getFormattedDateTime();
-
-  // 4. Prepare data payload
-const payload = {
-  gameTime,
-  ticketNumber: ticketList.join(', '), // or as array if backend accepts
-  totalQuatity: totalUpdatedQuantity,
-  totalPoints: totalUpdatedPoints,
-  loginId,
-  drawTime: currentDrawSlot, // <-- add this line
+    pdf.setFontSize(7);
+    pdf.text(rowText.trim(), 5, yPos);
+    yPos += 4;
+  }
+  
+  // Add line before totals
+  pdf.line(5, yPos, 75, yPos);
+  yPos += 5;
+  
+  // Total Quantity and Points
+  pdf.setFontSize(10);
+  pdf.text(`Total Quantity : ${data.totalQuatity}`, 5, yPos);
+  yPos += 5;
+  pdf.text(`Total Points : ${data.totalPoints}`, 5, yPos);
+  yPos += 8;
+  
+  // Generate barcode with dynamic ticket ID
+  const barcodeValue = `SJ${ticketId}`; // Dynamic barcode with ticket ID
+  const canvas = document.createElement('canvas');
+  JsBarcode(canvas, barcodeValue, {
+    format: 'CODE128',
+    width: 2,
+    height: 50,
+    displayValue: true,
+    fontSize: 14,
+    margin: 5
+  });
+  
+  // Convert canvas to image and add to PDF
+  const barcodeImage = canvas.toDataURL('image/png');
+  pdf.addImage(barcodeImage, 'PNG', 10, yPos, 60, 20);
+  
+  // Save or print the PDF
+  // For direct printing (opens print dialog)
+  pdf.autoPrint();
+  const pdfBlob = pdf.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  
+  // Open in new window for printing
+  const printWindow = window.open(pdfUrl);
+  printWindow.onload = function() {
+    printWindow.print();
+  };
+  
+  // Alternative: Save as file
+  // pdf.save(`receipt_${ticketId}.pdf`);
 };
 
 
-    // 5. Send data to backend
-    try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`, payload);
-      if (response.status === 201) {
-        alert("Tickets saved successfully!");
-        // Optional: Reset your form/grid here
-      } else {
-        alert("Failed to save tickets: " + (response.data.message || 'Unknown error'));
+
+  // to print and save the data
+const handlePrint = async () => {
+  // 1. Gather ticket numbers in your required format
+  let ticketList = [];
+  let selectedNumbers = [];
+  for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
+    for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
+      if (selected[rowIdx][colIdx]) {
+        selectedNumbers.push(allNumbers[colIdx][rowIdx]);
       }
-    } catch (error) {
-      alert("Error saving tickets: " + (error?.response?.data?.message || error.message));
     }
-  };
+  }
+  let filledCells = [];
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 10; col++) {
+      const key = `${row}-${col}`;
+      const value = cellOverrides[key];
+      if (value && value !== "") {
+        const cellNum = row * 10 + col;
+        filledCells.push({ cellIndex: String(cellNum).padStart(2, "0"), value });
+      }
+    }
+  }
+  selectedNumbers.forEach(num => {
+    filledCells.forEach(cell => {
+      ticketList.push(`${num}-${cell.cellIndex} : ${cell.value}`);
+    });
+  });
+
+  // 2. Get loginId from JWT
+  const loginId = getLoginIdFromToken();
+  if (!loginId) {
+    alert("User not logged in.");
+    return;
+  }
+
+  // 3. Get current date and time (formatted)
+  const gameTime = getFormattedDateTime();
+
+    // 4. Prepare data payload
+    const payload = {
+      gameTime,
+      ticketNumber: ticketList.join(', '), // or as array if backend accepts
+      totalQuatity: totalUpdatedQuantity,
+      totalPoints: totalUpdatedPoints,
+      loginId,
+      drawTime: currentDrawSlot, // <-- add this line
+    };
+
+
+  // 5. Send data to backend
+  try {
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`, payload);
+    if (response.status === 201) {
+      // Get ticket ID from response (adjust based on your backend response structure)
+      const ticketId = response.data.ticketId || response.data.id || Date.now().toString();
+      
+      alert("Tickets saved successfully!");
+      
+      // Generate and print the receipt with dynamic ticket ID
+      generatePrintReceipt({
+        gameTime: gameTime,
+        drawTime: currentDrawSlot,
+        loginId: loginId,
+        ticketNumber: ticketList.join(', '),
+        totalQuatity: totalUpdatedQuantity,
+        totalPoints: totalUpdatedPoints
+      }, ticketId);
+      
+      // Clear the form after printing
+      resetCheckboxes();
+      setCellOverrides({});
+      setColumnHeaders(Array(10).fill(""));
+      setRowHeaders(Array(10).fill(""));
+      
+    } else {
+      alert("Failed to save tickets: " + (response.data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert("Error saving tickets: " + (error?.response?.data?.message || error.message));
+  }
+};
 
 
   // Calculate total value (sum of all input boxes)
