@@ -7,6 +7,7 @@ import ShowResult from "@/Components/ShowResult/ShowResult";
 import { FP_SETS } from "@/data/fpSets";
 import axios from 'axios'
 import { DRAW_TIMES } from "@/data/drawTimes";
+import AdvanceDrawModal from "@/Components/AdvanceDrawModal/AdvanceDrawModal";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -81,6 +82,8 @@ const totalPoints = points.reduce((a, b) => a + b, 0);
 const [isFPMode, setIsFPMode] = useState(false); 
 const [activeFPSetIndex, setActiveFPSetIndex] = useState(null);
 const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRAW_TIMES));
+const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
+const [advanceDrawTimes, setAdvanceDrawTimes] = useState([]);
 
 
 const COLS = 10, ROWS = 10; // or 9 if that's your grid size
@@ -465,11 +468,11 @@ const handlePrint = async () => {
   // 4. Prepare data payload
 const payload = {
   gameTime,
-  ticketNumber: ticketList.join(', '), // or as array if backend accepts
+  ticketNumber: ticketList.join(', '),
   totalQuatity: totalUpdatedQuantity,
   totalPoints: totalUpdatedPoints,
   loginId,
-  drawTime: currentDrawSlot, // <-- add this line
+  drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
 };
 
 
@@ -874,15 +877,26 @@ function getNextDrawSlot(drawTimes) {
       />
     </div>
     <div className="flex-none">
-      <button className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25">
-        <Zap className="w-5 h-5" />
-        Advance Draw
-      </button>
+      <button
+  className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
+  onClick={() => setAdvanceModalOpen(true)}
+>  <Zap className="w-5 h-5" />
+  Advance Draw
+</button>
+
     </div>
   </div>
 </div>
 
 </div>
+<AdvanceDrawModal
+  open={advanceModalOpen}
+  onClose={() => setAdvanceModalOpen(false)}
+  selectedTimes={advanceDrawTimes}
+  setSelectedTimes={setAdvanceDrawTimes}
+  onConfirm={(selected) => setAdvanceDrawTimes(selected)}
+/>
+
 
     </div>
   );
