@@ -83,7 +83,7 @@ export default function Page() {
   const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRAW_TIMES));
 
 
-  const COLS = 10, ROWS = 10; // or 9 if that's your grid size
+  const COLS = 10, ROWS = 10; // or 9 if that's your grid size 
 
   const [columnHeaders, setColumnHeaders] = useState(Array(COLS).fill(""));
   const [rowHeaders, setRowHeaders] = useState(Array(ROWS).fill(""));
