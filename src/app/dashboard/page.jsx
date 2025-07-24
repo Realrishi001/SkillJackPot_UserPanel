@@ -7,6 +7,9 @@ import ShowResult from "../../Components/ShowResult/ShowResult";
 import { FP_SETS } from "../../data/fpSets";
 import axios from 'axios'
 import { DRAW_TIMES } from "../../data/drawTimes";
+import jsPDF from 'jspdf';
+import JsBarcode from 'jsbarcode';
+import AdvanceDrawModal from "../../Components/AdvanceDrawModal/AdvanceDrawModal.jsx";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -74,14 +77,15 @@ export default function Page() {
 
 
   // Constant Quantity and Points for demo (change values as needed)
-const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);  
-const [points, setPoints] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);  // Initial points for each row
-const totalQuantity = quantities.reduce((a, b) => a + b, 0);
-const totalPoints = points.reduce((a, b) => a + b, 0);
-const [isFPMode, setIsFPMode] = useState(false); 
-const [activeFPSetIndex, setActiveFPSetIndex] = useState(null);
-const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRAW_TIMES));
-
+  const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  const [points, setPoints] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);  // Initial points for each row
+  const totalQuantity = quantities.reduce((a, b) => a + b, 0);
+  const totalPoints = points.reduce((a, b) => a + b, 0);
+  const [isFPMode, setIsFPMode] = useState(false);
+  const [activeFPSetIndex, setActiveFPSetIndex] = useState(null);
+  const [currentDrawSlot, setCurrentDrawSlot] = useState(() => getNextDrawSlot(DRAW_TIMES));
+  const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
+  const [advanceDrawTimes, setAdvanceDrawTimes] = useState([]);
 
   const COLS = 10, ROWS = 10; // or 9 if that's your grid size 
 
@@ -565,16 +569,15 @@ const handlePrint = async () => {
   // 3. Get current date and time (formatted)
   const gameTime = getFormattedDateTime();
 
-    // 4. Prepare data payload
-    const payload = {
-      gameTime,
-      ticketNumber: ticketList.join(', '), // or as array if backend accepts
-      totalQuatity: totalUpdatedQuantity,
-      totalPoints: totalUpdatedPoints,
-      loginId,
-      drawTime: currentDrawSlot, // <-- add this line
-    };
-
+  // 4. Prepare data payload
+const payload = {
+  gameTime,
+  ticketNumber: ticketList.join(', '),
+  totalQuatity: totalUpdatedQuantity,
+  totalPoints: totalUpdatedPoints,
+  loginId,
+  drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+};
 
   // 5. Send data to backend
   try {
@@ -991,25 +994,37 @@ const handlePrint = async () => {
             </table>
           </div>
 
-  {/* Enhanced Footer */}
-  <div className="flex items-center mt-6 gap-3 p-3 bg-slate-800/30 rounded-xl border border-slate-700/50">
-    <div className="flex-1">
-      <input
-        type="text"
-        placeholder="Transaction No/Bar Code"
-        className="w-full py-3 px-5 rounded-xl bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
-      />
-    </div>
-    <div className="flex-none">
-      <button className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25">
-        <Zap className="w-5 h-5" />
-        Advance Draw
-      </button>
-    </div>
-  </div>
-</div>
+          {/* Enhanced Footer */}
+          <div className="flex items-center mt-6 gap-3 p-3 bg-slate-800/30 rounded-xl border border-slate-700/50">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Transaction No/Bar Code"
+                className="w-full py-3 px-5 rounded-xl bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
+              />
+            </div>
+            <div className="flex-none">
+              <button
+  className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
+  onClick={() => setAdvanceModalOpen(true)}
+>
+  <Zap className="w-5 h-5" />
+  Advance Draw
+</button>
+            </div>
+          </div>
+        </div>
 
-</div>
+      </div>
+
+      <AdvanceDrawModal
+  open={advanceModalOpen}
+  onClose={() => setAdvanceModalOpen(false)}
+  selectedTimes={advanceDrawTimes}
+  setSelectedTimes={setAdvanceDrawTimes}
+  onConfirm={(selected) => setAdvanceDrawTimes(selected)}
+/>
+
 
     </div>
   );

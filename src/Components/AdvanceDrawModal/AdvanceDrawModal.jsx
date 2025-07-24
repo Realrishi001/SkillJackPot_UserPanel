@@ -1,6 +1,6 @@
 "use client"
 import React from "react";
-import { DRAW_TIMES } from "@/data/drawTimes";
+import { DRAW_TIMES } from "../../data/drawTimes";
 
 export default function AdvanceDrawModal({ open, onClose, selectedTimes, setSelectedTimes, onConfirm }) {
   if (!open) return null;
