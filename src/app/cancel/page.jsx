@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Search, XCircle, Trash2, Filter, Download, RefreshCw,Home } from "lucide-react";
-import Navbar from "@/Components/Navbar/Navbar";
+import Navbar from "../../Components/Navbar/Navbar.jsx";
 import Link from "next/link";
 
 // Static sample data

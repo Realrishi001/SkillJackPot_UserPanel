@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Eye, EyeOff, Lock, User, Home} from "lucide-react";
-import Navbar from "@/Components/Navbar/Navbar";
+import Navbar from "../../Components/Navbar/Navbar";
 import Link from "next/link";
 
 export default function Page() {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Printer, Search, Calendar, Ticket, Filter, ChevronLeft, ChevronRight, Home } from "lucide-react";
-import Navbar from "@/Components/Navbar/Navbar";
+import Navbar from "../../Components/Navbar/Navbar";
 import Link from "next/link";
 
 const staticData = Array.from({ length: 50 }, (_, i) => ({
