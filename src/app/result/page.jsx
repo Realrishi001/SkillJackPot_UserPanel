@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Calendar, Clock, Grid3x3, ChevronDown, Home} from "lucide-react";
 import Link from "next/link";
-import Navbar from "@/Components/Navbar/Navbar";
+import Navbar from "../../Components/Navbar/Navbar";
 
 // Gradients for columns (repeats as needed)
 const colGradients = [

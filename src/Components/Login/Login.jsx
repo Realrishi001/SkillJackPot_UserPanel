@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import Link from 'next/link';
 // import toast from 'react-hot-toast'; // Uncomment if using react-hot-toast
 
 const Login = () => {
