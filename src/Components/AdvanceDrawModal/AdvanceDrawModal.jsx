@@ -17,7 +17,7 @@ export default function AdvanceDrawModal({ open, onClose, selectedTimes, setSele
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-xl">
         <h2 className="text-2xl font-bold text-purple-800 mb-4">Select Advance Draw Times</h2>
-        <div className="flex flex-wrap gap-4 mb-6">
+        <div className="flex justify-between flex-wrap gap-4 mb-6">
           {DRAW_TIMES.map((time, idx) => (
             <label key={time} className="flex items-center gap-2 cursor-pointer">
               <input

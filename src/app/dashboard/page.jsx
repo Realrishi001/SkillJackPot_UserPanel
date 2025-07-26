@@ -48,18 +48,52 @@ function getTodayDateString() {
   return `${d.getDate().toString().padStart(2, "0")} ${d.toLocaleString("en", { month: "short" })} ${d.getFullYear()}`;
 }
 
-const TIMER_KEY = "draw_remain_time_end";
+function parseTimeToToday(timeStr) {
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
+
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+}
+
+  // draw point function
+function getNextDrawSlot(drawTimes) {
+  const now = new Date();
+  const timeObjects = drawTimes.map(timeStr => {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+    if (modifier === "PM" && hours !== 12) hours += 12;
+    if (modifier === "AM" && hours === 12) hours = 0;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+  });
+
+  for (let i = 0; i < timeObjects.length; i++) {
+    if (now < timeObjects[i]) {
+      return drawTimes[i];
+    }
+  }
+  return drawTimes[0]; // First slot of next day
+}
+
 
 function getRemainTime() {
-  if (typeof window === "undefined") return 15 * 60;
-  let end = localStorage.getItem(TIMER_KEY);
-  if (!end) {
-    end = Date.now() + 15 * 60 * 1000;
-    localStorage.setItem(TIMER_KEY, end);
+  if (typeof window === "undefined") return 0;
+  
+  const nextSlot = getNextDrawSlot(DRAW_TIMES);  // e.g., "3:00 PM"
+  const now = new Date();
+  const nextSlotDate = parseTimeToToday(nextSlot);
+
+  // If the current time has passed the slot, assume next day
+  if (now > nextSlotDate) {
+    nextSlotDate.setDate(nextSlotDate.getDate() + 1);
   }
-  const remainMs = parseInt(end) - Date.now();
-  return Math.max(0, Math.floor(remainMs / 1000));
+
+  const remainMs = nextSlotDate - now;
+  return Math.max(0, Math.floor(remainMs / 1000)); // in seconds
 }
+
 function setTimerEnd(secs) {
   localStorage.setItem(TIMER_KEY, Date.now() + secs * 1000);
 }
@@ -137,27 +171,24 @@ export default function Page() {
   };
 
 
-
-
-
   // --- Timer logic ---
   const [remainSecs, setRemainSecs] = useState(() => getRemainTime());
   const timerRef = useRef();
 
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setRemainSecs(getRemainTime());
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, []);
+useEffect(() => {
+  setRemainSecs(getRemainTime()); // Set initial value
+  timerRef.current = setInterval(() => {
+    setRemainSecs(getRemainTime());
+  }, 1000);
+  return () => clearInterval(timerRef.current);
+}, []);
 
-  useEffect(() => {
-    if (remainSecs === 0) {
-      setTimerEnd(15 * 60);
-      setRemainSecs(15 * 60);
-      setCurrentDrawSlot(getNextDrawSlot(DRAW_TIMES)); // Update draw slot
-    }
-  }, [remainSecs]);
+
+useEffect(() => {
+  if (remainSecs === 0) {
+    setCurrentDrawSlot(getNextDrawSlot(DRAW_TIMES)); // Just update the slot
+  }
+}, [remainSecs]);
 
   // update the slots every 5 seconds to keep checking
   useEffect(() => {
@@ -263,12 +294,16 @@ export default function Page() {
 
 
   const resetCheckboxes = () => {
-    setSelected(Array(10).fill(null).map(() => Array(3).fill(false)));
-    setQuantities(Array(10).fill(0));  // Reset quantities
-    setPoints(Array(10).fill(0));  // Reset points
-    setActiveTypeFilter(null);
-    setActiveColFilter(null);
-  };
+  setSelected(Array(10).fill(null).map(() => Array(3).fill(false)));
+  setQuantities(Array(10).fill(0));  // Reset quantities
+  setPoints(Array(10).fill(0));  // Reset points
+  setActiveTypeFilter(null);
+  setActiveColFilter(null);
+  setCellOverrides({});
+  setColumnHeaders(Array(10).fill(""));
+  setRowHeaders(Array(10).fill(""));
+};
+
 
   useEffect(() => {
     // 1. Quantities per row
@@ -373,9 +408,6 @@ export default function Page() {
       });
     }
   };
-
-
-
 
   function getCellValue(row, col) {
     const key = `${row}-${col}`;
@@ -493,7 +525,7 @@ export default function Page() {
   pdf.setFontSize(10);
   pdf.text(`Total Quantity : ${data.totalQuatity}`, 5, yPos);
   yPos += 5;
-  pdf.text(`Total Points : ${data.totalPoints}`, 5, yPos);
+  pdf.text(`Total Amount : ${data.totalPoints}`, 5, yPos);
   yPos += 8;
   
   // Generate barcode with dynamic ticket ID
@@ -527,7 +559,6 @@ export default function Page() {
   // Alternative: Save as file
   // pdf.save(`receipt_${ticketId}.pdf`);
 };
-
 
 
   // to print and save the data
@@ -641,44 +672,24 @@ const payload = {
     return sum;
   }
 
-  // draw point function
-  function getNextDrawSlot(drawTimes) {
-    const now = new Date();
-    const timeObjects = drawTimes.map(timeStr => {
-      const [time, modifier] = timeStr.split(' ');
-      let [hours, minutes] = time.split(':').map(Number);
-      if (modifier === "PM" && hours !== 12) hours += 12;
-      if (modifier === "AM" && hours === 12) hours = 0;
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-    });
-
-    for (let i = 0; i < timeObjects.length; i++) {
-      if (now < timeObjects[i]) {
-        return drawTimes[i];
-      }
-    }
-    // If no future slot, return first slot of the next day
-    return drawTimes[0];
-  }
-
 
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <div>
+      {/* <div>
         <Navbar />
-      </div>
+      </div> */}
 
 
       <div className="w-full h-fit">
-        <ShowResult />
+        <ShowResult drawTime={currentDrawSlot} />
       </div>
 
       {/* Enhanced Draw Header */}
-      <div className="w-full flex flex-col sm:flex-row justify-between items-center sm:items-start p-4 sm:p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl backdrop-blur-sm">
+      <div className="w-full flex flex-col sm:flex-row justify-between items-center sm:items-start py-1 border-slate-700/50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl backdrop-blur-sm">
 
         {/* Tabs for Filter */}
-        <div className="flex gap-3 flex-wrap sm:flex-nowrap sm:w-auto w-full justify-center sm:justify-start mb-4 sm:mb-0">
+        <div className="flex gap-3 flex-wrap sm:flex-nowrap sm:w-auto w-full justify-center sm:justify-start mb-1 sm:mb-0">
           {[
             { key: "10-19", label: "F7 (10-19)" },
             { key: "30-39", label: "F8 (30-39)" },
@@ -687,7 +698,7 @@ const payload = {
             <button
               key={tab.key}
               onClick={() => handleFilter(tab.key)}
-              className={`px-6 py-3 rounded-xl font-bold text-white 
+              className={`px-4 py-1 rounded font-bold text-white
           ${activeFilter === tab.key
                   ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
                   : "bg-gradient-to-r from-purple-500 to-pink-500"
@@ -700,9 +711,9 @@ const payload = {
         </div>
 
         {/* Remain Time Section */}
-        <div className="flex items-center gap-2 px-6 py-3 bg-slate-800/80 rounded-2xl border border-red-500/30 shadow-lg mb-4 sm:mb-0">
+        <div className="flex items-center gap-2 px-6 py-1 bg-slate-800/80 rounded border border-red-500/30 shadow-lg mb-4 sm:mb-0">
           <Clock className="w-6 h-6 text-red-400 animate-pulse" />
-          <span className="text-sm sm:text-lg font-bold text-green-400 tracking-wider">
+          <span className="text-sm sm:text-sm font-bold text-green-400 tracking-wider">
             Remain Time
           </span>
           <span className="text-lg sm:text-xl font-mono font-bold text-red-400 bg-slate-900/50 px-3 py-1 rounded-lg">
@@ -712,15 +723,15 @@ const payload = {
 
         {/* Draw Time and Draw Date Sections */}
         <div className="flex flex-wrap gap-4 sm:gap-6 items-center justify-center sm:justify-start">
-          <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 rounded-xl border border-green-500/30 w-full sm:w-auto">
+          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 rounded border border-green-500/30 w-full sm:w-auto">
             <Play className="w-5 h-5 text-green-400" />
-            <span className="text-sm sm:text-lg font-bold text-green-400">Draw Time</span>
-            <span className="text-lg sm:text-xl font-mono font-bold text-red-400">{currentDrawSlot}</span>
+            <span className="text-sm sm:text-sm font-bold text-green-400">Draw Time</span>
+            <span className="text-lg sm:text-md font-mono font-bold text-red-400">{currentDrawSlot}</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 rounded-xl border border-green-500/30 w-full sm:w-auto">
+          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 rounded border border-green-500/30 w-full sm:w-auto">
             <Calendar className="w-5 h-5 text-green-400" />
-            <span className="text-sm sm:text-lg font-bold text-green-400">Draw Date</span>
-            <span className="text-lg sm:text-xl font-mono font-bold text-red-400">{drawDate}</span>
+            <span className="text-sm sm:text-sm font-bold text-green-400">Draw Date</span>
+            <span className="text-lg sm:text-md font-mono font-bold text-red-400">{drawDate}</span>
           </div>
         </div>
       </div>
@@ -775,27 +786,6 @@ const payload = {
             </button>
           </div>
 
-          {/* Column Filters (F7, F8, F9) */}
-          <div className="flex flex-wrap gap-2 mb-4 justify-center sm:justify-start">
-            {[
-              { key: "10-19", label: "10-19", color: "from-purple-600 to-pink-600" },
-              { key: "30-39", label: "30-39", color: "from-purple-600 to-pink-600" },
-              { key: "50-59", label: "50-59", color: "from-purple-600 to-pink-600" }
-            ].map((tab, i) => (
-              <button
-                key={tab.key}
-                onClick={() => handleFilter(tab.key)}
-                className={`px-5 py-2.5 rounded-xl font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${activeFilter === tab.key
-                  ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                  : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-                  }`}
-                title={tab.key === "10-19" ? "F7" : tab.key === "30-39" ? "F8" : "F9"}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
           {/* Number + Checkbox Grid */}
           <div className="grid grid-cols-3 gap-1 mb-4">
             {range(0, 9).map((row) =>
@@ -805,11 +795,11 @@ const payload = {
                 return (
                   <div
                     key={num}
-                    className={`relative flex items-center gap-1 px-2 py-2 ${color} hover:scale-105 transition-all duration-200 cursor-pointer`}
+                    className={`relative flex items-center gap-1 px-2 py-1 ${color} hover:scale-105 transition-all duration-200 cursor-pointer`}
                     style={{
                       border: "2px solid #fff",
                       borderRadius: "12px",
-                      margin: "1px",
+                      margin: "0",
                       boxShadow: "0 4px 8px rgba(0,0,0,0.15)"
                     }}
                     onClick={() => toggle(row, colIdx)}
@@ -819,7 +809,7 @@ const payload = {
                       type="checkbox"
                       checked={selected[row][colIdx]}
                       onChange={() => toggle(row, colIdx)}
-                      className="peer appearance-none w-6 h-6 rounded-md bg-white border-2 border-[#4A314D] checked:bg-gradient-to-r checked:from-purple-600 checked:to-pink-600 checked:border-purple-600 flex-shrink-0 transition-all duration-200 hover:scale-110"
+                      className="peer appearance-none w-6 h-6 rounded bg-white border-2 border-[#4A314D] checked:bg-gradient-to-r checked:from-purple-600 checked:to-pink-600 checked:border-purple-600 flex-shrink-0 transition-all duration-200 hover:scale-110"
                       style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
                     />
                     {/* Enhanced Checkmark */}
@@ -831,7 +821,7 @@ const payload = {
                     </span>
                     {/* Enhanced Number Box */}
                     <span
-                      className="w-9 h-9 flex items-center justify-center font-bold text-md text-[#4A314D] bg-white border-2 border-[#4A314D] rounded-lg select-none transition-all duration-200 hover:bg-gray-50"
+                      className="w-10 h-7 flex items-center justify-center font-bold text-md text-[#4A314D] bg-white border-2 border-[#4A314D] rounded select-none transition-all duration-200 hover:bg-gray-50"
                       style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
                     >
                       {num}
@@ -862,25 +852,7 @@ const payload = {
 
         {/* Main Table (unchanged from before) */}
         <div className="flex-1 bg-gradient-to-b from-slate-800/70 to-slate-900/90 rounded-2xl shadow-2xl border-2 border-slate-700/50 transparent-scrollbar p-4 overflow-hidden backdrop-blur-sm">
-          {/* Stats Header */}
-          <div className="flex justify-between items-center mb-4 p-3 bg-slate-800/50 rounded-xl border border-purple-500/30">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse"></div>
-              <span className="text-lg font-bold text-slate-200">Game Matrix</span>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-yellow-500/30">
-                <Target className="w-4 h-4 text-yellow-400" />
-                <span className="text-yellow-400 font-medium">Total Quantity:</span>
-                <span className="font-bold text-white">{totalUpdatedQuantity}</span>
-              </div>
-              <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-pink-500/30">
-                <TrendingUp className="w-4 h-4 text-pink-400" />
-                <span className="text-pink-400 font-medium">Total Points:</span>
-                <span className="font-bold text-white">{totalUpdatedPoints}</span>
-              </div>
-            </div>
-          </div>
+         
 
           {/* Enhanced Table */}
           <div className="overflow-x-auto transparent-scrollbar">
@@ -888,7 +860,7 @@ const payload = {
               <thead>
                 <tr className="border-b border-slate-700/50">
                   {/* Row header blank */}
-                  <th className="bg-transparent p-2"></th>
+                  <th className="bg-transparent p-0"></th>
                   {/* 10 col headers */}
                   {range(0, 9).map((n) => (
                     <th
@@ -911,7 +883,7 @@ const payload = {
                     <td key={`col-header-${col}`} className="p-1 text-center border-r border-slate-700/20 last:border-r-0">
                       <input
                         type="text"
-                        className="w-10 h-8 rounded-lg bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
+                        className="w-12 h-6 rounded bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
                         maxLength={2}
                         value={columnHeaders[col]}
                         onChange={(e) => handleColumnHeaderChange(col, e.target.value)}
@@ -920,15 +892,16 @@ const payload = {
                   ))}
                   <td className="bg-transparent"></td>
                   <td className="p-1 text-center font-bold text-yellow-400">Quantity</td>
-                  <td className="p-1 text-center font-bold text-pink-400">Points</td>
+                  <td className="p-1 text-center font-bold text-pink-400">Amounts</td>
                 </tr>
                 {/* Main Grid Rows */}
                 {range(0, 9).map((row) => (
                   <tr key={row} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
                     <td className="p-1 text-center border-r border-slate-700/20">
+                    <div className="text-xs text-white font-bold py-2"></div>
                       <input
                         type="text"
-                        className="w-10 h-8 rounded-lg bg-lime-900/80 text-lime-200 border-2 border-lime-400/40 text-center font-bold shadow focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 outline-none transition-all duration-200 hover:border-lime-300"
+                        className="w-12 h-6 rounded bg-lime-900/80 text-lime-200 border-2 border-lime-400/40 text-center font-bold shadow focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 outline-none transition-all duration-200 hover:border-lime-300"
                         maxLength={2}
                         value={rowHeaders[row]}
                         onChange={(e) => handleRowHeaderChange(row, e.target.value)}
@@ -938,10 +911,10 @@ const payload = {
                     {/* main input box */}
                     {range(0, 9).map((col) => (
                       <td key={col} className="p-1 text-center border-r border-slate-700/20 last:border-r-0">
-                        <div className="text-xs text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
+                        <div className="text-[11px] text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
                         <input
                           type="text"
-                          className={`w-10 h-8 rounded-lg bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
+                          className={`w-12 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
                     ${isFPMode && activeFPSetIndex !== null && FP_SETS[activeFPSetIndex].includes(String(row * 10 + col).padStart(2, "0"))
                               ? 'bg-green-600/80 border-green-300 ring-2 ring-green-300'
                               : ''
