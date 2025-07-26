@@ -10,6 +10,7 @@ import { DRAW_TIMES } from "../../data/drawTimes";
 import jsPDF from 'jspdf';
 import JsBarcode from 'jsbarcode';
 import AdvanceDrawModal from "../../Components/AdvanceDrawModal/AdvanceDrawModal.jsx";
+import { useRouter } from "next/navigation.js";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -99,6 +100,15 @@ function setTimerEnd(secs) {
 }
 
 export default function Page() {
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!localStorage.getItem("auth_token")) {
+      router.push("/");
+    }
+  }, []);
+
   const [selected, setSelected] = useState(
     Array(10)
       .fill(null)
@@ -684,9 +694,7 @@ const payload = {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      {/* <div>
-        <Navbar />
-      </div> */}
+    
 
 
       <div className="w-full h-fit">
@@ -1006,6 +1014,9 @@ const payload = {
   onConfirm={(selected) => setAdvanceDrawTimes(selected)}
 />
 
+  <div>
+        <Navbar />
+      </div>
 
     </div>
   );

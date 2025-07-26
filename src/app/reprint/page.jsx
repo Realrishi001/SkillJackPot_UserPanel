@@ -1,49 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Printer, Search, Calendar, Ticket, Filter, ChevronLeft, ChevronRight, Home } from "lucide-react";
 import Navbar from "../../Components/Navbar/Navbar";
 import Link from "next/link";
-
-const staticData = Array.from({ length: 50 }, (_, i) => ({
-  sr: i + 1,
-  gameTime: `${Math.floor(1 + Math.random() * 12)
-    .toString()
-    .padStart(2, "0")}:${Math.floor(Math.random() * 60)
-    .toString()
-    .padStart(2, "0")} ${Math.random() > 0.5 ? "AM" : "PM"}`,
-  gameDate: `2024-0${Math.floor(1 + Math.random() * 9)}-${Math.floor(
-    10 + Math.random() * 19
-  )}`,
-  ticketNo: "TIC" + Math.floor(100000 + Math.random() * 900000),
-  points: Math.floor(10 + Math.random() * 90),
-}));
+import axios from "axios";
 
 const entryOptions = [10, 20, 50, 100];
 
 const Page = () => {
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const [showEntries, setShowEntries] = useState(10);
   const [search, setSearch] = useState("");
   const [current, setCurrent] = useState(1);
   const [ticketSearch, setTicketSearch] = useState("");
   const [dateSearch, setDateSearch] = useState("");
 
-  // Filter data
-  let filtered = staticData;
+  // Fetch ticket data from backend
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/reprint-tickets`)
+      .then(res => {
+        setTickets(res.data.data || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError("Failed to fetch tickets");
+        setLoading(false);
+      });
+  }, []);
+
+  // Filter logic
+  let filtered = tickets;
   if (ticketSearch.trim() !== "") {
     filtered = filtered.filter((row) =>
-      row.ticketNo.toLowerCase().includes(ticketSearch.toLowerCase())
+      String(row.ticketNo || "").toLowerCase().includes(ticketSearch.toLowerCase())
     );
   }
   if (dateSearch.trim() !== "") {
-    filtered = filtered.filter((row) => row.gameDate === dateSearch);
+    filtered = filtered.filter((row) =>
+      (row.gameDate || "").startsWith(dateSearch)
+    );
   }
   if (search.trim() !== "") {
     filtered = filtered.filter(
       (row) =>
-        row.ticketNo.toLowerCase().includes(search.toLowerCase()) ||
-        row.gameDate.includes(search) ||
-        row.gameTime.toLowerCase().includes(search.toLowerCase())
+        String(row.ticketNo || "").toLowerCase().includes(search.toLowerCase()) ||
+        (row.gameDate || "").includes(search) ||
+        (row.gameTime || "").toLowerCase().includes(search.toLowerCase())
     );
   }
 
@@ -54,18 +63,18 @@ const Page = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-        <Navbar/>
+      <Navbar />
 
-        <div className="max-w-7xl mx-auto pt-6 px-6">
-  <Link
-    href="/dashboard"
-    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow hover:scale-105 transition-all duration-150 hover:from-blue-700 hover:to-purple-700"
-    title="Go to Dashboard"
-  >
-    <Home className="w-5 h-5" />
-    <span className="hidden sm:inline">Home</span>
-  </Link>
-</div>
+      <div className="max-w-7xl mx-auto pt-6 px-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow hover:scale-105 transition-all duration-150 hover:from-blue-700 hover:to-purple-700"
+          title="Go to Dashboard"
+        >
+          <Home className="w-5 h-5" />
+          <span className="hidden sm:inline">Home</span>
+        </Link>
+      </div>
 
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
@@ -84,7 +93,6 @@ const Page = () => {
               <Filter className="w-5 h-5 text-blue-400" />
               <h2 className="text-xl font-semibold text-white">Search Filters</h2>
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Ticket Number Search */}
               <div className="space-y-2">
@@ -102,7 +110,6 @@ const Page = () => {
                   />
                 </div>
               </div>
-
               {/* Date Search */}
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
@@ -116,7 +123,6 @@ const Page = () => {
                   onChange={(e) => setDateSearch(e.target.value)}
                 />
               </div>
-
               {/* Search Button */}
               <div className="flex items-end">
                 <button
@@ -151,7 +157,6 @@ const Page = () => {
                 </select>
                 <span className="text-slate-300 text-sm font-medium">entries</span>
               </div>
-              
               <div className="flex items-center gap-3">
                 <span className="text-slate-300 text-sm font-medium">Quick Search:</span>
                 <div className="relative">
@@ -177,28 +182,23 @@ const Page = () => {
               <table className="min-w-full text-left bg-slate-800/50 text-white">
                 <thead>
                   <tr className="bg-slate-700/50">
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">
-                      Sr No
-                    </th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">
-                      Game Time
-                    </th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">
-                      Game Date
-                    </th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">
-                      Ticket No
-                    </th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">
-                      Points
-                    </th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50 text-center">
-                      Action
-                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Game Time</th>
+                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Game Date</th>
+                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Ticket No</th>
+                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Points</th>
+                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {showData.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-slate-400">Loading tickets...</td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-red-400">{error}</td>
+                    </tr>
+                  ) : showData.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                         <div className="flex flex-col items-center gap-3">
@@ -210,25 +210,11 @@ const Page = () => {
                     </tr>
                   ) : (
                     showData.map((row, i) => (
-                      <tr
-                        key={row.ticketNo}
-                        className="hover:bg-slate-700/30 transition-colors duration-150"
-                      >
-                        <td className="px-6 py-4 text-sm font-medium text-slate-200 border-b border-slate-700/30">
-                          {row.sr}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-300 border-b border-slate-700/30">
-                          {row.gameTime}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-300 border-b border-slate-700/30">
-                          {row.gameDate}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-mono text-blue-300 border-b border-slate-700/30">
-                          {row.ticketNo}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-semibold text-green-400 border-b border-slate-700/30">
-                          {row.points}
-                        </td>
+                      <tr key={row.id || i} className="hover:bg-slate-700/30 transition-colors duration-150">
+                        <td className="px-6 py-4 text-sm text-slate-300 border-b border-slate-700/30">{row.gameTime}</td>
+                        <td className="px-6 py-4 text-sm text-slate-300 border-b border-slate-700/30">{row.gameDate || "-"}</td>
+                        <td className="px-6 py-4 text-sm font-mono text-blue-300 border-b border-slate-700/30">{row.ticketNo || "-"}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-400 border-b border-slate-700/30">{row.totalPoints}</td>
                         <td className="px-6 py-4 text-center border-b border-slate-700/30">
                           <button
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 hover:from-purple-700 hover:to-pink-700"
@@ -254,7 +240,6 @@ const Page = () => {
                 </span>{" "}
                 of <span className="font-semibold text-slate-200">{filtered.length}</span> entries
               </div>
-              
               <div className="flex items-center gap-2">
                 <button
                   disabled={current === 1}
@@ -268,14 +253,12 @@ const Page = () => {
                   <ChevronLeft className="w-4 h-4" />
                   Previous
                 </button>
-                
                 <div className="flex items-center gap-1">
                   <span className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold">
                     {current}
                   </span>
                   <span className="text-slate-400 text-sm">of {totalPages}</span>
                 </div>
-                
                 <button
                   disabled={current === totalPages || totalPages === 0}
                   onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
