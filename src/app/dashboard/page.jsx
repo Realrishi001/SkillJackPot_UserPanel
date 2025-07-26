@@ -493,7 +493,14 @@ useEffect(() => {
   
   // Game Time
   pdf.setFontSize(9);
-  pdf.text(`Game Time:- ${data.drawTime}`, 5, 38);
+const drawTimeText = Array.isArray(data.drawTime)
+  ? (data.drawTime.length > 1
+      ? `Draw Times: ${data.drawTime.join(', ')}`
+      : `Draw Time: ${data.drawTime[0]}`
+    )
+  : `Draw Time: ${data.drawTime}`;
+pdf.text(drawTimeText, 5, 38);
+
   pdf.text(`Login Id: ${data.loginId}`, 5, 43);
   
   // Add line
@@ -621,13 +628,14 @@ const payload = {
       
       // Generate and print the receipt with dynamic ticket ID
       generatePrintReceipt({
-        gameTime: gameTime,
-        drawTime: currentDrawSlot,
-        loginId: loginId,
-        ticketNumber: ticketList.join(', '),
-        totalQuatity: totalUpdatedQuantity,
-        totalPoints: totalUpdatedPoints
-      }, ticketId);
+  gameTime: gameTime,
+  drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],  // ✅ Array of draw times
+  loginId: loginId,
+  ticketNumber: ticketList.join(', '),
+  totalQuatity: totalUpdatedQuantity,
+  totalPoints: totalUpdatedPoints
+}, ticketId);
+
       
       // Clear the form after printing
       resetCheckboxes();
