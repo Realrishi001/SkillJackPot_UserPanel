@@ -436,27 +436,33 @@ useEffect(() => {
   }
 
 
-  function applyFilter(type, colKey) {
-    const colIndexes = { "10-19": 0, "30-39": 1, "50-59": 2 };
-    const newSelected = Array(10).fill(null).map(() => Array(3).fill(false));
+function applyFilter(type, colKey) {
+  const colIndexes = { "10-19": 0, "30-39": 1, "50-59": 2 };
+  const newSelected = Array(10).fill(null).map(() => Array(3).fill(false));
 
-    for (let row = 0; row < 10; row++) {
-      for (let col = 0; col < 3; col++) {
-        const num = allNumbers[col][row];
-        let matchType = false;
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 3; col++) {
+      const num = allNumbers[col][row];
+      let matchType = false;
 
-        if (!type || type === "all") matchType = true;
-        else if (type === "even") matchType = isEven(num);
-        else if (type === "odd") matchType = isOdd(num);
-        else if (type === "fp") matchType = isPrime(num);
+      if (!type || type === "all") matchType = true;
+      else if (type === "even") matchType = isEven(num);
+      else if (type === "odd") matchType = isOdd(num);
+      else if (type === "fp") matchType = isPrime(num);
 
-        let matchCol = !colKey || col === colIndexes[colKey];
+      let matchCol = !colKey || col === colIndexes[colKey];
 
-        if (matchType && matchCol) newSelected[row][col] = true;
-      }
+      if (matchType && matchCol) newSelected[row][col] = true;
     }
-    setSelected(newSelected);
   }
+  setSelected(newSelected);
+
+  // ----------- ADD THIS PART BELOW -----------
+  // recalculate quantities and points based on newSelected
+  const updatedQuantities = newSelected.map(rowArr => rowArr.filter(Boolean).length);
+  setQuantities(updatedQuantities);
+  setPoints(updatedQuantities.map(q => q * 2)); // assuming points = quantity * 2
+}
 
 
   function getLoginIdFromToken() {
