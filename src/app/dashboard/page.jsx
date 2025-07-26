@@ -10,6 +10,7 @@ import { DRAW_TIMES } from "../../data/drawTimes";
 import jsPDF from 'jspdf';
 import JsBarcode from 'jsbarcode';
 import AdvanceDrawModal from "../../Components/AdvanceDrawModal/AdvanceDrawModal.jsx";
+import { useRouter } from "next/navigation.js";
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -100,8 +101,10 @@ function setTimerEnd(secs) {
 
 export default function Page() {
 
+  const router = useRouter();
+
   useEffect(() => {
-    if (!localStorage.getItem("auth_token")) {
+    if (!localStorage.getItem("userToken")) {
       router.push("/");
     }
   }, []);
