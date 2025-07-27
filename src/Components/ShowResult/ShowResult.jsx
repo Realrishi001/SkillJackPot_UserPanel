@@ -26,7 +26,7 @@ function getBackendDrawTime(drawTime) {
   return `${outHours}:${minStr} ${outModifier}`;
 }
 
-// Helper: Split tickets by first two digits for rows
+// Helper: Split and SORT tickets by first two digits for rows
 function getSeriesRows(tickets) {
   const row1 = [];
   const row2 = [];
@@ -38,10 +38,14 @@ function getSeriesRows(tickets) {
     else if (prefix >= 30 && prefix <= 39) row2.push(String(t.number));
     else if (prefix >= 50 && prefix <= 59) row3.push(String(t.number));
   });
-  while (row1.length < 10) row1.push("");
-  while (row2.length < 10) row2.push("");
-  while (row3.length < 10) row3.push("");
-  return [row1, row2, row3];
+
+  // Sort non-empty, then add empty
+  function padAndSort(row) {
+    const nums = row.filter(x => x !== "").sort((a, b) => Number(a) - Number(b));
+    while (nums.length < 10) nums.push("");
+    return nums;
+  }
+  return [padAndSort(row1), padAndSort(row2), padAndSort(row3)];
 }
 
 // Slot-number animation for each cell
@@ -284,33 +288,31 @@ export default function ShowResult({ drawTime }) {
 
   return (
     <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "none",
-    position: "relative",
-    margin: 0,
-    padding: 0,
-    width: "100%",
-  }}
->
-  {/* This container allows horizontal scroll but also centers */}
-  <div
-    style={{
-      maxWidth: "1240px", // adjust as per your max slot width
-      width: "100%",
-      margin: "0 auto",
-      padding: "12px 0",
-      display: "flex",
-      justifyContent: "center",
-    }}
-  >
-    <div style={{ width: "100%", overflowX: "auto", display: "flex", justifyContent: "center" }}>
-      <CasinoSlotMachine rows={rows} leverActive={leverActive} onLeverPull={handleManualRefresh} />
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "none",
+        position: "relative",
+        margin: 0,
+        padding: 0,
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "1240px", // adjust as per your max slot width
+          width: "100%",
+          margin: "0 auto",
+          padding: "12px 0",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ width: "100%", overflowX: "auto", display: "flex", justifyContent: "center" }}>
+          <CasinoSlotMachine rows={rows} leverActive={leverActive} onLeverPull={handleManualRefresh} />
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-
   );
 }
