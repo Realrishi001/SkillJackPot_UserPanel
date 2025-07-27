@@ -696,41 +696,64 @@ const payload = {
     return sum;
   }
 
-
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
     
-
-
       <div className="w-full h-fit">
         <ShowResult drawTime={currentDrawSlot} />
       </div>
 
       {/* Enhanced Draw Header */}
-      <div className="w-full flex flex-col sm:flex-row justify-between items-center sm:items-start py-1 border-slate-700/50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl backdrop-blur-sm">
+      <div className="w-full flex flex-col sm:flex-row justify-between items-center py-1 border-slate-700/50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl backdrop-blur-sm px-6">
 
-        {/* Tabs for Filter */}
-        <div className="flex gap-3 flex-wrap sm:flex-nowrap sm:w-auto w-full justify-center sm:justify-start mb-1 sm:mb-0">
-          {[
-            { key: "10-19", label: "F7 (10-19)" },
-            { key: "30-39", label: "F8 (30-39)" },
-            { key: "50-59", label: "F9 (50-59)" }
-          ].map((tab, i) => (
-            <button
-              key={tab.key}
-              onClick={() => handleFilter(tab.key)}
-              className={`px-4 py-1 rounded font-bold text-white
-          ${activeFilter === tab.key
-                  ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
-                  : "bg-gradient-to-r from-purple-500 to-pink-500"
-                }
-          hover:from-pink-500 hover:to-purple-500 shadow-lg hover:shadow-purple-500/25 transition-all duration-300 active:scale-95 border border-purple-400/30`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* Filter Buttons */}
+          {/* Filter Buttons */}
+<div className="flex flex-wrap gap-2 mb-4 justify-center ">
+  <button
+    onClick={() => handleOddEvenFP("all")}
+    className={`px-4 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+      activeTypeFilter === "all"
+        ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
+        : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+    }`}
+  >
+    All
+  </button>
+  <button
+    onClick={() => handleOddEvenFP("even")}
+    className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+      activeTypeFilter === "even"
+        ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
+        : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+    }`}
+  >
+    Even
+  </button>
+  <button
+    onClick={() => handleOddEvenFP("odd")}
+    className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+      activeTypeFilter === "odd"
+        ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
+        : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+    }`}
+  >
+    Odd
+  </button>
+  <button
+    onClick={() => {
+      setIsFPMode(fp => !fp);
+      setActiveFPSetIndex(null);
+      setActiveTypeFilter("fp");
+    }}
+    className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+      activeTypeFilter === "fp"
+        ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
+        : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
+    }`}
+  >
+    FP
+  </button>
+</div>
 
         {/* Remain Time Section */}
         <div className="flex items-center gap-2 px-6 py-1 bg-slate-800/80 rounded border border-red-500/30 shadow-lg mb-4 sm:mb-0">
@@ -764,52 +787,30 @@ const payload = {
       <div className="flex flex-wrap p-2 gap-2">
         {/* Left Panel - Number Selectors, ODD EVEN FP */}
         <div className="rounded-2xl shadow-2xl bg-gradient-to-b from-slate-100/95 to-slate-300/80 p-2 border-2 border-gray-300/50 min-h-[700px] w-full lg:max-w-[320px] sm:w-[360px] backdrop-blur-sm">
-          {/* Filter Buttons */}
-          <div className="flex flex-wrap gap-2 mb-4 justify-center sm:justify-start">
+          {/* Tabs for Filter */}
+        <div className="flex gap-3 flex-wrap sm:flex-nowrap sm:w-auto w-full justify-center sm:justify-start mb-2 sm:mb-0">
+          {[
+            { key: "10-19", label: "F7 (10-19)" },
+            { key: "30-39", label: "F8 (30-39)" },
+            { key: "50-59", label: "F9 (50-59)" }
+          ].map((tab, i) => (
             <button
-              onClick={() => handleOddEvenFP("all")}
-              className={`px-3 py-2.5 rounded-xl font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${activeFilter === "all"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-                }`}
+              key={tab.key}
+              onClick={() => handleFilter(tab.key)}
+              className={`px-4 py-1 rounded font-bold text-md text-white
+          ${activeFilter === tab.key
+                  ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
+                  : "bg-gradient-to-r from-purple-500 to-pink-500"
+                }
+          hover:from-pink-500 hover:to-purple-500 shadow-lg hover:shadow-purple-500/25 transition-all duration-300 active:scale-95 border border-purple-400/30`}
             >
-              All
+              {tab.label}
             </button>
-            <button
-              onClick={() => handleOddEvenFP("even")}
-              className={`px-3 py-2.5 rounded-xl font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${activeFilter === "even"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-                }`}
-            >
-              Even
-            </button>
-            <button
-              onClick={() => handleOddEvenFP("odd")}
-              className={`px-3 py-2.5 rounded-xl font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${activeFilter === "odd"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-                }`}
-            >
-              Odd
-            </button>
-            <button
-              onClick={() => {
-                setIsFPMode(fp => !fp);
-                setActiveFPSetIndex(null); // reset current set highlight on mode toggle
-                setActiveTypeFilter("fp");
-              }}
-              className={`px-5 py-2.5 rounded-xl font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${isFPMode
-                ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
-                : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
-                }`}
-            >
-              FP
-            </button>
-          </div>
+          ))}
+        </div>
 
           {/* Number + Checkbox Grid */}
-          <div className="grid grid-cols-3 gap-1 mb-4">
+          <div className="grid grid-cols-3 gap-1 mb-4 mt-5">
             {range(0, 9).map((row) =>
               allNumbers.map((colArray, colIdx) => {
                 const num = colArray[row];
