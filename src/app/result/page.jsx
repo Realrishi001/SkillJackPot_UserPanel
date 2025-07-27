@@ -38,7 +38,20 @@ function filterNumbersByColumn(numbers, colStart, colEnd) {
   });
 }
 
-const LOGIN_ID = 1; // Change as needed
+function getLoginIdFromToken() {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.id;
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
 
 const Page = () => {
   const [selectedCol, setSelectedCol] = useState(0);
@@ -50,6 +63,11 @@ const Page = () => {
   const [tableData, setTableData] = useState([]); // [{drawTime, numbersByCol:[]}, ...]
   const [rowLabels, setRowLabels] = useState([]); // Dynamic slot labels from backend
   const [loading, setLoading] = useState(false);
+  const [loginId, setLoginId] = useState(null);
+
+  useEffect(() => {
+    setLoginId(getLoginIdFromToken());
+  }, []);
 
   const columns = getColumns(
     columnRanges[selectedCol].start,
@@ -61,7 +79,7 @@ const Page = () => {
 
     axios
       .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-slots`, {
-        loginId: LOGIN_ID,
+        loginId: loginId,
         drawDate: selectedDate, // <--- ADD drawDate to request body
       })
       .then(res => {

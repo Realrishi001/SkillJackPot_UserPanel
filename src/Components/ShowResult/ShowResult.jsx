@@ -142,7 +142,7 @@ function CasinoSlotMachine({ rows }) {
         <div
           style={{
             width: "100%",
-            height: "100%",
+            height: "100%", 
             display: "flex",
             flexDirection: "column",
             gap: 5,
@@ -246,6 +246,7 @@ function CasinoSlotMachine({ rows }) {
     </div>
   );
 }
+
 
 // Main component
 export default function ShowResult({ drawTime }) {
