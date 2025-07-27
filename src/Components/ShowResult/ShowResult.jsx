@@ -3,13 +3,55 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 
+// Helper: Calculate 15 minutes before draw time
+function getBackendDrawTime(drawTime) {
+  if (!drawTime) return drawTime;
+  const [time, modifier] = drawTime.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+
+  if (modifier.toUpperCase() === "PM" && hours !== 12) hours += 12;
+  if (modifier.toUpperCase() === "AM" && hours === 12) hours = 0;
+
+  const dt = new Date();
+  dt.setHours(hours, minutes, 0, 0);
+  dt.setMinutes(dt.getMinutes() - 15);
+
+  let outHours = dt.getHours();
+  let outMinutes = dt.getMinutes();
+  const outModifier = outHours >= 12 ? "PM" : "AM";
+  if (outHours === 0) outHours = 12;
+  else if (outHours > 12) outHours -= 12;
+  const minStr = outMinutes < 10 ? "0" + outMinutes : outMinutes;
+
+  return `${outHours}:${minStr} ${outModifier}`;
+}
+
+// Helper: Split tickets by first two digits for rows
+function getSeriesRows(tickets) {
+  const row1 = [];
+  const row2 = [];
+  const row3 = [];
+  tickets.forEach((t) => {
+    if (!t || !t.number) return;
+    const prefix = Number(String(t.number).slice(0, 2));
+    if (prefix >= 10 && prefix <= 19) row1.push(String(t.number));
+    else if (prefix >= 30 && prefix <= 39) row2.push(String(t.number));
+    else if (prefix >= 50 && prefix <= 59) row3.push(String(t.number));
+  });
+  while (row1.length < 10) row1.push("");
+  while (row2.length < 10) row2.push("");
+  while (row3.length < 10) row3.push("");
+  return [row1, row2, row3];
+}
+
 // Slot-number animation for each cell
 function SlotNumber({ value, delay = 0 }) {
-  const [display, setDisplay] = useState(value === "" ? "" : Math.floor(Math.random() * 9000 + 1000));
+  const isEmpty = value === "" || value === null || value === undefined;
+  const [display, setDisplay] = useState(isEmpty ? "" : Math.floor(Math.random() * 9000 + 1000));
   const [rolling, setRolling] = useState(true);
 
   useEffect(() => {
-    if (value === "") {
+    if (isEmpty) {
       setDisplay("");
       setRolling(false);
       return;
@@ -28,7 +70,7 @@ function SlotNumber({ value, delay = 0 }) {
     }
     timeout = setTimeout(animateRoll, delay);
     return () => clearTimeout(timeout);
-  }, [value, delay]);
+  }, [value, delay, isEmpty]);
 
   return (
     <motion.div
@@ -51,9 +93,9 @@ function SlotNumber({ value, delay = 0 }) {
         fontFamily: "monospace",
         fontSize: "clamp(1.1rem, 3vw, 1.2rem)",
         letterSpacing: 1.5,
-        color: value === "" ? "#aaa" : "#fff",
-        textShadow: value === "" ? "none" : "0 2px 6px #000d",
-        opacity: value === "" ? 0.18 : 1,
+        color: isEmpty ? "#aaa" : "#fff",
+        textShadow: isEmpty ? "none" : "0 2px 6px #000d",
+        opacity: isEmpty ? 0.18 : 1,
       }}
     >
       {display}
@@ -61,7 +103,7 @@ function SlotNumber({ value, delay = 0 }) {
   );
 }
 
-// Slot Machine UI as before
+// Slot Machine UI
 function CasinoSlotMachine({ rows }) {
   return (
     <div
@@ -110,11 +152,11 @@ function CasinoSlotMachine({ rows }) {
             <div
               key={rowIdx}
               style={{
-                width: "100%",
+                minWidth: "max-content",
                 display: "flex",
                 gap: 5,
                 alignItems: "center",
-                justifyContent: "center",
+                justifyContent: "flex-start",
               }}
             >
               {row.map((num, colIdx) => (
@@ -133,6 +175,7 @@ function CasinoSlotMachine({ rows }) {
                     alignItems: "center",
                     justifyContent: "center",
                     overflow: "hidden",
+                    flexShrink: 0,
                   }}
                 >
                   <div
@@ -201,101 +244,73 @@ function CasinoSlotMachine({ rows }) {
 }
 
 // Main component
-export default function ShowResult({drawTime}) {
+export default function ShowResult({ drawTime }) {
   const [ticketNumbers, setTicketNumbers] = useState([]);
   const [leverActive, setLeverActive] = useState(false);
 
+  useEffect(() => {
+    axios
+      .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
+        drawTime: getBackendDrawTime(drawTime),
+        adminId: 1,
+      })
+      .then((res) => {
+        let tickets = [];
+        if (Array.isArray(res.data.selectedTickets)) {
+          tickets = res.data.selectedTickets;
+        } else if (res.data.numbersBySeries) {
+          tickets = Object.values(res.data.numbersBySeries).flat();
+        }
+        const [series10, series30, series50] = getSeriesRows(tickets);
+        setTicketNumbers([series10, series30, series50]);
+      })
+      .catch((err) => {
+        setTicketNumbers([
+          Array(10).fill(""),
+          Array(10).fill(""),
+          Array(10).fill(""),
+        ]);
+      });
+  }, [drawTime]);
 
-  function getBackendDrawTime(drawTime) {
-  if (!drawTime) return drawTime;
-
-  const [time, modifier] = drawTime.split(' '); // e.g., "3:00 PM"
-  let [hours, minutes] = time.split(':').map(Number);
-
-  if (modifier === "PM" && hours !== 12) hours += 12;
-  if (modifier === "AM" && hours === 12) hours = 0;
-
-  const dt = new Date();
-  dt.setHours(hours, minutes, 0, 0);
-
-  // Subtract 15 minutes
-  dt.setMinutes(dt.getMinutes() - 15);
-
-  // Format back to "hh:mm AM/PM"
-  return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-
-  // Fetch and split numbers by series
-useEffect(() => {
-  axios
-    .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
-      drawTime: getBackendDrawTime(drawTime),
-      adminId: 1,
-    })
-    .then((res) => {
-      const nb = res.data.numbersBySeries || {};
-      const series10 = (nb["10"] || []).map((t) => t.number ?? "");
-      const series30 = (nb["30"] || []).map((t) => t.number ?? "");
-      const series50 = (nb["50"] || []).map((t) => t.number ?? "");
-
-      while (series10.length < 10) series10.push("");
-      while (series30.length < 10) series30.push("");
-      while (series50.length < 10) series50.push("");
-
-      setTicketNumbers([series10, series30, series50]);
-    })
-    .catch(() => {
-      setTicketNumbers([
-        Array(10).fill(""),
-        Array(10).fill(""),
-        Array(10).fill(""),
-      ]);
-    });
-}, [drawTime]);
-
-
-  // "Lever" - just re-triggers animation, not fetching new numbers
   const handleManualRefresh = () => {
     if (leverActive) return;
     setLeverActive(true);
-    // Re-render, triggers SlotNumber animation due to key/val changes
     setTicketNumbers((prev) => [...prev]);
     setTimeout(() => setLeverActive(false), 1200);
   };
 
-  // Prepare rows for UI: [row1, row2, row3] - each is 10 items
   const rows = ticketNumbers.length === 3 ? ticketNumbers : [[], [], []];
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "none",
-        position: "relative",
-        overflow: "hidden",
-        margin: 0,
-        padding: 0,
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          zIndex: 2,
-          margin: 0,
-          padding: 0,
-        }}
-      >
-        <div style={{ margin: 0, padding: 0 }}>
-          <CasinoSlotMachine rows={rows} leverActive={leverActive} onLeverPull={handleManualRefresh} />
-        </div>
-        
-      </div>
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "none",
+    position: "relative",
+    margin: 0,
+    padding: 0,
+    width: "100%",
+  }}
+>
+  {/* This container allows horizontal scroll but also centers */}
+  <div
+    style={{
+      maxWidth: "1240px", // adjust as per your max slot width
+      width: "100%",
+      margin: "0 auto",
+      padding: "12px 0",
+      display: "flex",
+      justifyContent: "center",
+    }}
+  >
+    <div style={{ width: "100%", overflowX: "auto", display: "flex", justifyContent: "center" }}>
+      <CasinoSlotMachine rows={rows} leverActive={leverActive} onLeverPull={handleManualRefresh} />
     </div>
+  </div>
+</div>
+
   );
 }
