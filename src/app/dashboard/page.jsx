@@ -392,7 +392,7 @@ useEffect(() => {
             }
           }
         });
-        // --- Calculate sum of all input values and print ---
+
         let sum = 0;
         Object.values(updated).forEach(v => {
           const num = parseInt(v, 10);
@@ -457,13 +457,10 @@ function applyFilter(type, colKey) {
   }
   setSelected(newSelected);
 
-  // ----------- ADD THIS PART BELOW -----------
-  // recalculate quantities and points based on newSelected
   const updatedQuantities = newSelected.map(rowArr => rowArr.filter(Boolean).length);
   setQuantities(updatedQuantities);
-  setPoints(updatedQuantities.map(q => q * 2)); // assuming points = quantity * 2
+  setPoints(updatedQuantities.map(q => q * 2)); 
 }
-
 
   function getLoginIdFromToken() {
     const token = localStorage.getItem('userToken');
@@ -584,7 +581,6 @@ pdf.text(drawTimeText, 5, 38);
 };
 
 
-  // to print and save the data
 const handlePrint = async () => {
   // 1. Gather ticket numbers in your required format
   let ticketList = [];
@@ -624,41 +620,61 @@ const handlePrint = async () => {
   const gameTime = getFormattedDateTime();
 
   // 4. Prepare data payload
-const payload = {
-  gameTime,
-  ticketNumber: ticketList.join(', '),
-  totalQuatity: totalUpdatedQuantity,
-  totalPoints: totalUpdatedPoints,
-  loginId,
-  drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
-};
+  const payload = {
+    gameTime,
+    ticketNumber: ticketList.join(', '),
+    totalQuatity: totalUpdatedQuantity,
+    totalPoints: totalUpdatedPoints,
+    loginId,
+    drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+  };
 
-  // 5. Send data to backend
+  // 5. Send data to backend (save ticket)
   try {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`, payload);
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
+      payload
+    );
     if (response.status === 201) {
-      // Get ticket ID from response (adjust based on your backend response structure)
       const ticketId = response.data.ticketId || response.data.id || Date.now().toString();
-      
-      alert("Tickets saved successfully!");
-      
-      // Generate and print the receipt with dynamic ticket ID
-      generatePrintReceipt({
-  gameTime: gameTime,
-  drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],  // ✅ Array of draw times
-  loginId: loginId,
-  ticketNumber: ticketList.join(', '),
-  totalQuatity: totalUpdatedQuantity,
-  totalPoints: totalUpdatedPoints
-}, ticketId);
 
-      
-      // Clear the form after printing
+      alert("Tickets saved successfully!");
+
+      // 6. Subtract the balance from admin/shop
+      try {
+        const subtractRes = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/subtract-balance`,
+          {
+            id : loginId,       // If backend expects a different key (like username), adjust here
+            amount: totalUpdatedPoints,
+          }
+        );
+        if (!subtractRes.data.success) {
+          alert("Warning: Could not subtract balance: " + subtractRes.data.message);
+        }
+      } catch (e) {
+        alert("Error subtracting balance: " + (e?.response?.data?.message || e.message));
+      }
+
+      // 7. Generate and print the receipt
+      generatePrintReceipt(
+        {
+          gameTime: gameTime,
+          drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+          loginId: loginId,
+          ticketNumber: ticketList.join(', '),
+          totalQuatity: totalUpdatedQuantity,
+          totalPoints: totalUpdatedPoints,
+        },
+        ticketId
+      );
+
+      // 8. Clear the form after printing
       resetCheckboxes();
       setCellOverrides({});
       setColumnHeaders(Array(10).fill(""));
       setRowHeaders(Array(10).fill(""));
-      
+
     } else {
       alert("Failed to save tickets: " + (response.data.message || 'Unknown error'));
     }
@@ -666,7 +682,6 @@ const payload = {
     alert("Error saving tickets: " + (error?.response?.data?.message || error.message));
   }
 };
-
 
   // Calculate total value (sum of all input boxes)
   let totalValue = 0;
@@ -739,20 +754,27 @@ const payload = {
   >
     Odd
   </button>
-  <button
-    onClick={() => {
-      setIsFPMode(fp => !fp);
+<button
+  onClick={() => {
+    if (activeTypeFilter === "fp") {
+      setIsFPMode(false);
+      setActiveTypeFilter(null); // Remove FP filter if already active
       setActiveFPSetIndex(null);
-      setActiveTypeFilter("fp");
-    }}
-    className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-      activeTypeFilter === "fp"
-        ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
-        : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
-    }`}
-  >
-    FP
-  </button>
+    } else {
+      setIsFPMode(true);
+      setActiveTypeFilter("fp"); // Set FP filter
+      setActiveFPSetIndex(null);
+    }
+  }}
+  className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+    activeTypeFilter === "fp"
+      ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
+      : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
+  }`}
+>
+  FP
+</button>
+
 </div>
 
         {/* Remain Time Section */}
