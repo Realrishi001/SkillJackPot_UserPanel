@@ -2,6 +2,8 @@
 import React, { useState,useEffect } from "react";
 import Navbar from "../../Components/Navbar/Navbar";
 import axios from "axios";
+import Link from "next/link";
+import { Home } from "lucide-react";
 
 // Tabs
 const TABS = [
@@ -136,6 +138,16 @@ const ShopAccounts = () => {
     <div className="min-h-screen w-full flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="mb-10">
         <Navbar />
+      <div className="max-w-7xl mx-auto pt-6 px-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow hover:scale-105 transition-all duration-150 hover:from-blue-700 hover:to-purple-700"
+          title="Go to Dashboard"
+        >
+          <Home className="w-5 h-5" />
+          <span className="hidden sm:inline">Home</span>
+        </Link>
+      </div>
       </div>
       <div className="max-w-4xl mx-auto bg-slate-900 rounded-2xl shadow-2xl p-6">
         {/* Header */}

@@ -101,6 +101,11 @@ function setTimerEnd(secs) {
 
 export default function Page() {
 
+  useEffect(() => {
+  setActiveTypeFilter("all"); // select All on mount
+}, []);
+
+
   const router = useRouter();
 
   useEffect(() => {
@@ -144,41 +149,64 @@ export default function Page() {
 
 
   // Handlers:
-  const handleRowHeaderChange = (row, value) => {
-    if (!/^-?\d*$/.test(value)) return;
-    setRowHeaders(headers =>
-      headers.map((v, i) => (i === row ? value : v))
-    );
-    if (value !== "") {
-      setCellOverrides(overrides => {
-        const updated = { ...overrides };
-        for (let col = 0; col < 10; col++) {
-          const key = `${row}-${col}`;
-          const prev = parseInt(updated[key], 10) || 0;
-          updated[key] = String(prev + parseInt(value, 10));
-        }
-        return updated;
-      });
-    }
-  };
+const handleRowHeaderChange = (row, value) => {
+  if (!/^-?\d*$/.test(value)) return;
 
-  const handleColumnHeaderChange = (col, value) => {
-    if (!/^-?\d*$/.test(value)) return;
-    setColumnHeaders(headers =>
-      headers.map((v, i) => (i === col ? value : v))
-    );
-    if (value !== "") {
-      setCellOverrides(overrides => {
-        const updated = { ...overrides };
-        for (let row = 0; row < 10; row++) {
-          const key = `${row}-${col}`;
-          const prev = parseInt(updated[key], 10) || 0;
-          updated[key] = String(prev + parseInt(value, 10));
-        }
-        return updated;
-      });
+  setRowHeaders(headers =>
+    headers.map((v, i) => (i === row ? value : v))
+  );
+
+  setCellOverrides(overrides => {
+    const updated = { ...overrides };
+    const rowValue = value === "" ? null : parseInt(value, 10);
+
+    for (let col = 0; col < 10; col++) {
+      const key = `${row}-${col}`;
+      const colVal = columnHeaders[col] === "" ? null : parseInt(columnHeaders[col], 10);
+
+      if (rowValue === null && colVal === null) {
+        delete updated[key];
+      } else if (rowValue === null) {
+        updated[key] = String(colVal);
+      } else if (colVal === null) {
+        updated[key] = String(rowValue);
+      } else {
+        updated[key] = String(rowValue + colVal);
+      }
     }
-  };
+    return updated;
+  });
+};
+
+
+const handleColumnHeaderChange = (col, value) => {
+  if (!/^-?\d*$/.test(value)) return;
+
+  setColumnHeaders(headers =>
+    headers.map((v, i) => (i === col ? value : v))
+  );
+
+  setCellOverrides(overrides => {
+    const updated = { ...overrides };
+    const colValue = value === "" ? null : parseInt(value, 10);
+
+    for (let row = 0; row < 10; row++) {
+      const key = `${row}-${col}`;
+      const rowVal = rowHeaders[row] === "" ? null : parseInt(rowHeaders[row], 10);
+
+      if (colValue === null && rowVal === null) {
+        delete updated[key];
+      } else if (colValue === null) {
+        updated[key] = String(rowVal);
+      } else if (rowVal === null) {
+        updated[key] = String(colValue);
+      } else {
+        updated[key] = String(rowVal + colValue);
+      }
+    }
+    return updated;
+  });
+};
 
 
   // --- Timer logic ---
@@ -619,17 +647,24 @@ const handlePrint = async () => {
   // 3. Get current date and time (formatted)
   const gameTime = getFormattedDateTime();
 
-  // 4. Prepare data payload
+  // 4. Calculate multiplier and new totals
+  const drawTimesArr = advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot];
+  const multiplier = drawTimesArr.length;
+
+  const multipliedTotalQuantity = totalUpdatedQuantity * multiplier;
+  const multipliedTotalPoints = totalUpdatedPoints * multiplier;
+
+  // 5. Prepare data payload
   const payload = {
     gameTime,
     ticketNumber: ticketList.join(', '),
-    totalQuatity: totalUpdatedQuantity,
-    totalPoints: totalUpdatedPoints,
+    totalQuatity: multipliedTotalQuantity,      // multiplied!
+    totalPoints: multipliedTotalPoints,         // multiplied!
     loginId,
-    drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+    drawTime: drawTimesArr,
   };
 
-  // 5. Send data to backend (save ticket)
+  // 6. Send data to backend (save ticket)
   try {
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
@@ -640,13 +675,13 @@ const handlePrint = async () => {
 
       alert("Tickets saved successfully!");
 
-      // 6. Subtract the balance from admin/shop
+      // 7. Subtract the balance from admin/shop (use multiplied points)
       try {
         const subtractRes = await axios.post(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/subtract-balance`,
           {
-            id : loginId,       // If backend expects a different key (like username), adjust here
-            amount: totalUpdatedPoints,
+            id: loginId,
+            amount: multipliedTotalPoints,   // use multiplied value!
           }
         );
         if (!subtractRes.data.success) {
@@ -656,20 +691,20 @@ const handlePrint = async () => {
         alert("Error subtracting balance: " + (e?.response?.data?.message || e.message));
       }
 
-      // 7. Generate and print the receipt
+      // 8. Generate and print the receipt (use multiplied values)
       generatePrintReceipt(
         {
           gameTime: gameTime,
-          drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+          drawTime: drawTimesArr,
           loginId: loginId,
           ticketNumber: ticketList.join(', '),
-          totalQuatity: totalUpdatedQuantity,
-          totalPoints: totalUpdatedPoints,
+          totalQuatity: multipliedTotalQuantity,
+          totalPoints: multipliedTotalPoints,
         },
         ticketId
       );
 
-      // 8. Clear the form after printing
+      // 9. Clear the form after printing
       resetCheckboxes();
       setCellOverrides({});
       setColumnHeaders(Array(10).fill(""));
@@ -756,18 +791,16 @@ const handlePrint = async () => {
   </button>
 <button
   onClick={() => {
-    if (activeTypeFilter === "fp") {
+    if (isFPMode) {
       setIsFPMode(false);
-      setActiveTypeFilter(null); // Remove FP filter if already active
       setActiveFPSetIndex(null);
     } else {
       setIsFPMode(true);
-      setActiveTypeFilter("fp"); // Set FP filter
       setActiveFPSetIndex(null);
     }
   }}
   className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-    activeTypeFilter === "fp"
+    isFPMode
       ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
       : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
   }`}
@@ -776,7 +809,6 @@ const handlePrint = async () => {
 </button>
 
 </div>
-
         {/* Remain Time Section */}
         <div className="flex items-center gap-2 px-6 py-1 bg-slate-800/80 rounded border border-red-500/30 shadow-lg mb-4 sm:mb-0">
           <Clock className="w-6 h-6 text-red-400 animate-pulse" />
