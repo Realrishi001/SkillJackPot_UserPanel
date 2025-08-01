@@ -60,14 +60,23 @@ const Page = () => {
     return d.toISOString().slice(0, 10);
   });
 
+
   const [tableData, setTableData] = useState([]); // [{drawTime, numbersByCol:[]}, ...]
   const [rowLabels, setRowLabels] = useState([]); // Dynamic slot labels from backend
   const [loading, setLoading] = useState(false);
   const [loginId, setLoginId] = useState(null);
 
   useEffect(() => {
+      if (!localStorage.getItem("userToken")) {
+        router.push("/");
+      }
+    }, []);
+
+  useEffect(() => {
     setLoginId(getLoginIdFromToken());
   }, []);
+
+    
 
   const columns = getColumns(
     columnRanges[selectedCol].start,

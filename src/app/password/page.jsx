@@ -16,6 +16,12 @@ export default function Page() {
 
   const [message, setMessage] = useState({ type: "", text: "" });
 
+    useEffect(() => {
+      if (!localStorage.getItem("userToken")) {
+        router.push("/");
+      }
+    }, []);
+
   // Dummy submit handler (replace with real logic)
   const handleSubmit = (e) => {
     e.preventDefault();

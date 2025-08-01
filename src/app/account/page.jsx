@@ -89,6 +89,12 @@ const ShopAccounts = () => {
     setLoginId(id);
   }, []);
 
+  useEffect(() => {
+    if (!localStorage.getItem("userToken")) {
+      router.push("/");
+    }
+  }, []);
+
   // For demo, Net tab stays static
   const netConfig = TABLE_CONFIG["net"];
   const netTotals = netConfig.getTotals ? netConfig.getTotals(netConfig.data) : {};

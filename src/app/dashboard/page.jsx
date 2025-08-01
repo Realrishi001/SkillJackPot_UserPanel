@@ -142,7 +142,7 @@ export default function Page() {
   const [activeFilter, setActiveFilter] = useState(null);
 
   const [activeTypeFilter, setActiveTypeFilter] = useState(null); // 'all', 'odd', 'even', 'fp', or null
-  const [activeColFilter, setActiveColFilter] = useState(null); // '10-19', '30-39', '50-59', or null
+  const [activeColFilter, setActiveColFilter] = useState([]); // '10-19', '30-39', '50-59', or null
 
   // Constant Quantity and Points for demo (change values as needed)
   const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -337,27 +337,37 @@ export default function Page() {
   }, [activeFilter]);
 
   // --- Column/Range Filters for F7/F8/F9 --- //
-  const handleFilter = (colKey) => {
-    if (activeColFilter === colKey) {
-      setActiveColFilter(null);
-      if (!activeTypeFilter) resetCheckboxes();
-      else applyFilter(activeTypeFilter, null);
-      return;
+const handleFilter = (colKey) => {
+  // Determine which column index we are toggling
+  let colIndex = null;
+  if (colKey === "10-19") colIndex = 0;
+  else if (colKey === "30-39") colIndex = 1;
+  else if (colKey === "50-59") colIndex = 2;
+
+  // Toggle this column in the checkbox grid
+  setSelected((prevSelected) => {
+    const newSelected = prevSelected.map(row => row.slice());
+    // Check if this column is already fully selected
+    const columnSelected = newSelected.every(row => row[colIndex]);
+    for (let row = 0; row < 10; row++) {
+      newSelected[row][colIndex] = !columnSelected; // toggle
     }
-    setActiveColFilter(colKey);
-    applyFilter(activeTypeFilter, colKey);
-  };
+    return newSelected;
+  });
+
+  // Toggle the button highlight (multi-select)
+  setActiveColFilter((prev) => {
+    const set = new Set(prev);
+    if (set.has(colKey)) set.delete(colKey);
+    else set.add(colKey);
+    return Array.from(set);
+  });
+};
+
+
 
   const handleOddEvenFP = (type) => {
-    if (activeTypeFilter === type) {
-      setActiveTypeFilter(null);
-      // If both filters are off, reset all
-      if (!activeColFilter) resetCheckboxes();
-      else applyFilter(null, activeColFilter);
-      return;
-    }
     setActiveTypeFilter(type);
-    applyFilter(type, activeColFilter);
   };
 
   const resetCheckboxes = () => {
@@ -539,50 +549,6 @@ export default function Page() {
     return FP_SETS.findIndex((set) => set.includes(numStr));
   }
 
-  function applyFilter(type, colKey) {
-    const colIndexes = { "10-19": 0, "30-39": 1, "50-59": 2 };
-
-    // Initialize all selections to false
-    const newSelected = Array(10)
-      .fill(null)
-      .map(() => Array(3).fill(false));
-
-    // 🚫 Skip applying filter logic globally unless colKey is given
-    if (!colKey) {
-      // Preserve existing selection (or keep empty)
-      setSelected(newSelected);
-      setQuantities(Array(10).fill(0));
-      setPoints(Array(10).fill(0));
-      return;
-    }
-
-    for (let row = 0; row < 10; row++) {
-      for (let col = 0; col < 3; col++) {
-        const num = allNumbers[col][row];
-        const matchCol = col === colIndexes[colKey];
-
-        if (!matchCol) continue;
-
-        let matchType = false;
-        if (!type || type === "all") matchType = true;
-        else if (type === "even") matchType = isEven(num);
-        else if (type === "odd") matchType = isOdd(num);
-        else if (type === "fp") matchType = isPrime(num);
-
-        if (matchType) {
-          newSelected[row][col] = true;
-        }
-      }
-    }
-
-    // Update state
-    setSelected(newSelected);
-    const updatedQuantities = newSelected.map(
-      (rowArr) => rowArr.filter(Boolean).length
-    );
-    setQuantities(updatedQuantities);
-    setPoints(updatedQuantities.map((q) => q * 2));
-  }
 
   function getLoginIdFromToken() {
     const token = localStorage.getItem("userToken");
@@ -707,6 +673,14 @@ export default function Page() {
   };
 
   const handlePrint = async () => {
+     if (!canPrint) {
+    if (remainSecs <= 30) {
+      alert("Print is disabled during the last 30 seconds before draw time!");
+    } else if (totalUpdatedQuantity === 0) {
+      alert("No quantity selected or no tickets to print.");
+    }
+    return;
+  }
     // 1. Gather ticket numbers in your required format
     let ticketList = [];
     let selectedNumbers = [];
@@ -850,6 +824,18 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
   );
   const totalUpdatedPoints = updatedPoints.reduce((sum, val) => sum + val, 0);
 
+  function getRowColForNumber(num) {
+  for (let col = 0; col < allNumbers.length; col++) {
+    for (let row = 0; row < allNumbers[col].length; row++) {
+      if (allNumbers[col][row] === num) {
+        return [row, col];
+      }
+    }
+  }
+  return null;
+}
+
+  
   // Sum of values in a row
   function getRowSum(row) {
     let sum = 0;
@@ -871,6 +857,8 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
     }
     return sum;
   }
+
+const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -915,13 +903,10 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
           </button>
           <button
             onClick={() => {
-              if (isFPMode) {
-                setIsFPMode(false);
-                setActiveFPSetIndex(null);
-              } else {
-                setIsFPMode(true);
-                setActiveFPSetIndex(null);
-              }
+              // Toggle FP mode on/off
+              setIsFPMode((v) => !v);
+              setActiveFPSetIndex(null);
+              setActiveTypeFilter("all"); // When FP is clicked, make "All" the active filter
             }}
             className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
               isFPMode
@@ -931,6 +916,7 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
           >
             FP
           </button>
+
         </div>
         {/* Remain Time Section */}
         <div className="flex items-center gap-2 px-6 py-1 bg-slate-800/80 rounded border border-red-500/30 shadow-lg mb-4 sm:mb-0">
@@ -980,14 +966,13 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
               <button
                 key={tab.key}
                 onClick={() => handleFilter(tab.key)}
-                disabled  
                 className={`px-4 py-1 rounded font-bold text-md text-white
-          ${
-            activeFilter === tab.key
-              ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
-              : "bg-gradient-to-r from-purple-500 to-pink-500"
-          }
-          hover:from-pink-500 hover:to-purple-500 shadow-lg hover:shadow-purple-500/25 transition-all duration-300 active:scale-95 border border-purple-400/30`}
+                ${
+                  Array.isArray(activeColFilter) && activeColFilter.includes(tab.key)
+                    ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
+                    : "bg-gradient-to-r from-purple-500 to-pink-500"
+                }
+                hover:from-pink-500 hover:to-purple-500 shadow-lg hover:shadow-purple-500/25 transition-all duration-300 active:scale-95 border border-purple-400/30`}
               >
                 {tab.label}
               </button>
@@ -1046,13 +1031,14 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
 
           {/* Enhanced Action Buttons */}
           <div className="flex gap-3 mt-6">
-            <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95"
-              onClick={handlePrint}
-            >
-              <Printer className="w-5 h-5" />
-              Print
-            </button>
+          <button
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={handlePrint}
+            disabled={!canPrint}
+          >
+            <Printer className="w-5 h-5" />
+            Print
+          </button>
             <button
               onClick={resetCheckboxes}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95"

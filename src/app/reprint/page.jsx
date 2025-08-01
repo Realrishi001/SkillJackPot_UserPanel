@@ -19,6 +19,12 @@ const Page = () => {
   const [ticketSearch, setTicketSearch] = useState("");
   const [dateSearch, setDateSearch] = useState("");
 
+  useEffect(() => {
+    if (!localStorage.getItem("userToken")) {
+      router.push("/");
+    }
+  }, []);
+
   // Fetch ticket data from backend
   useEffect(() => {
     setLoading(true);

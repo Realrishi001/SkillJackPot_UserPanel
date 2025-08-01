@@ -42,6 +42,12 @@ export default function Page() {
   const totalActive = staticData.filter(item => item.status === "Active").length;
   const totalCancelled = staticData.filter(item => item.status === "Cancelled").length;
 
+  useEffect(() => {
+    if (!localStorage.getItem("userToken")) {
+      router.push("/");
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <Navbar/>
