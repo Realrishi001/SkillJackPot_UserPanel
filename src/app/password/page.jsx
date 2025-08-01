@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Lock, User, Home} from "lucide-react";
 import Navbar from "../../Components/Navbar/Navbar";
 import Link from "next/link";

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, XCircle, Trash2, Filter, Download, RefreshCw,Home } from "lucide-react";
 import Navbar from "../../Components/Navbar/Navbar.jsx";
 import Link from "next/link";
@@ -17,6 +17,13 @@ const staticData = Array.from({ length: 40 }, (_, i) => ({
 const entryOptions = [10, 20, 50, 100];
 
 export default function Page() {
+
+    useEffect(() => {
+    if (!localStorage.getItem("userToken")) {
+      router.push("/");
+    }
+  }, []);
+
   const [showEntries, setShowEntries] = useState(10);
   const [search, setSearch] = useState("");
   const [current, setCurrent] = useState(1);
@@ -41,12 +48,6 @@ export default function Page() {
   // Stats
   const totalActive = staticData.filter(item => item.status === "Active").length;
   const totalCancelled = staticData.filter(item => item.status === "Cancelled").length;
-
-  useEffect(() => {
-    if (!localStorage.getItem("userToken")) {
-      router.push("/");
-    }
-  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
