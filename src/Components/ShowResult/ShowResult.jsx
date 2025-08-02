@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 
-// Helper: Calculate 15 minutes before draw time
+// ------- Helpers ----------
 function getBackendDrawTime(drawTime) {
   if (!drawTime) return drawTime;
   const [time, modifier] = drawTime.split(' ');
@@ -26,7 +26,6 @@ function getBackendDrawTime(drawTime) {
   return `${outHours}:${minStr} ${outModifier}`;
 }
 
-// Helper: Split and SORT tickets by first two digits for rows
 function getSeriesRows(tickets) {
   const row1 = [];
   const row2 = [];
@@ -38,8 +37,6 @@ function getSeriesRows(tickets) {
     else if (prefix >= 30 && prefix <= 39) row2.push(String(t.number));
     else if (prefix >= 50 && prefix <= 59) row3.push(String(t.number));
   });
-
-  // Sort non-empty, then add empty
   function padAndSort(row) {
     const nums = row.filter(x => x !== "").sort((a, b) => Number(a) - Number(b));
     while (nums.length < 10) nums.push("");
@@ -48,7 +45,7 @@ function getSeriesRows(tickets) {
   return [padAndSort(row1), padAndSort(row2), padAndSort(row3)];
 }
 
-// Slot-number animation for each cell
+// ------- Slot-number Animation -----------
 function SlotNumber({ value, delay = 0 }) {
   const isEmpty = value === "" || value === null || value === undefined;
   const [display, setDisplay] = useState(isEmpty ? "" : Math.floor(Math.random() * 9000 + 1000));
@@ -107,7 +104,33 @@ function SlotNumber({ value, delay = 0 }) {
   );
 }
 
-// Slot Machine UI
+// ------- UI Chips -----------
+function LeftGameId({ gameId }) {
+  return (
+    <div className="flex flex-col items-start w-full md:w-auto mb-4 md:mb-0">
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 rounded-lg border border-slate-700/50 text-xs font-semibold text-white shadow">
+        Game ID: <span className="font-mono text-purple-400">{gameId}</span>
+      </div>
+    </div>
+  );
+}
+function RightGameInfo({ lastPoints, lastTicket, balance }) {
+  return (
+    <div className="flex flex-col items-end gap-2 w-full md:w-auto mt-4 md:mt-0">
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 rounded-lg border border-slate-700/50 text-xs text-white shadow">
+        Last Points: <span className="font-mono text-purple-400">{lastPoints} pts</span>
+      </div>
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 rounded-lg border border-slate-700/50 text-xs text-white shadow">
+        Last Ticket: <span className="font-mono text-purple-400">{lastTicket}</span>
+      </div>
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 rounded-lg border border-slate-700/50 text-xs text-white shadow">
+        Limit: <span className="font-mono text-purple-400">{balance}</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Slot Machine UI -----------
 function CasinoSlotMachine({ rows }) {
   return (
     <div
@@ -248,11 +271,50 @@ function CasinoSlotMachine({ rows }) {
 }
 
 
-// Main component
+// ----------- Main Component --------------
 export default function ShowResult({ drawTime }) {
   const [ticketNumbers, setTicketNumbers] = useState([]);
   const [leverActive, setLeverActive] = useState(false);
 
+  // Game Info States
+  const [gameId, setGameId] = useState("-");
+  const [lastPoints, setLastPoints] = useState("-");
+  const [lastTicket, setLastTicket] = useState("-");
+  const [balance, setBalance] = useState("-");
+
+  // Game ID from JWT
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const token = localStorage.getItem("userToken");
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload && payload.id) setGameId(payload.id);
+        }
+      } catch (err) {
+        setGameId("-");
+      }
+    }
+  }, []);
+
+  // Fetch Points/Ticket/Limit
+  useEffect(() => {
+    if (gameId && gameId !== "-") {
+      axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/navbar-details`, { loginId: gameId })
+        .then(res => {
+          setLastPoints(res.data.lastTotalPoint ?? "-");
+          setLastTicket(res.data.lastTicketNumber ?? "-");
+          setBalance(res.data.balance ?? "-");
+        })
+        .catch(() => {
+          setLastPoints("-");
+          setLastTicket("-");
+          setBalance("-");
+        });
+    }
+  }, [gameId]);
+
+  // Winning Numbers
   useEffect(() => {
     axios
       .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
@@ -288,31 +350,18 @@ export default function ShowResult({ drawTime }) {
   const rows = ticketNumbers.length === 3 ? ticketNumbers : [[], [], []];
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "none",
-        position: "relative",
-        margin: 0,
-        padding: 0,
-        width: "100%",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1240px", // adjust as per your max slot width
-          width: "100%",
-          margin: "0 auto",
-          padding: "12px 0",
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <div style={{ width: "100%", overflowX: "auto", display: "flex", justifyContent: "center" }}>
-          <CasinoSlotMachine rows={rows} leverActive={leverActive} onLeverPull={handleManualRefresh} />
-        </div>
+    <div className="w-full px-5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 ">
+      {/* LEFT: Game ID */}
+      <div className="w-full md:w-auto flex justify-center ">
+        <LeftGameId gameId={gameId} />
+      </div>
+      {/* CENTER: Slot Machine */}
+      <div className="w-full md:max-w-2xl flex justify-center">
+        <CasinoSlotMachine rows={rows} />
+      </div>
+      {/* RIGHT: Points, Ticket, Limit */}
+      <div className="w-full md:w-auto flex justify-center md:justify-start">
+        <RightGameInfo lastPoints={lastPoints} lastTicket={lastTicket} balance={balance} />
       </div>
     </div>
   );

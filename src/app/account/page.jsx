@@ -1,5 +1,5 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../../Components/Navbar/Navbar";
 import axios from "axios";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { Home } from "lucide-react";
 const TABS = [
   { label: "Points Summary", key: "points" },
   { label: "Net To Pay Summary", key: "net" },
+  { label: "Claimed Tickets", key: "claimed" },
 ];
 
 // Table configs for each tab (columns + data + total label)
@@ -57,6 +58,15 @@ const TABLE_CONFIG = {
       netToPay: data.reduce((a, b) => a + Number(b.netToPay || 0), 0),
     }),
   },
+  claimed: {
+    columns: [
+      { label: "Sr. No.", key: "sr" },
+      { label: "Ticket No.", key: "ticketId" }, 
+      { label: "Total Quantity", key: "totalQuantity" },
+      { label: "Winning Tickets", key: "winningTickets" }
+    ],
+    totalLabel: "Total",
+  },
 };
 
 function getLoginIdFromToken() {
@@ -74,12 +84,12 @@ function getLoginIdFromToken() {
   return null;
 }
 
-
 const ShopAccounts = () => {
   const [activeTab, setActiveTab] = useState("points");
   const [fromDate, setFromDate] = useState("2025-07-25");
   const [toDate, setToDate] = useState("2025-07-27");
   const [pointsSummaryData, setPointsSummaryData] = useState(null);
+  const [claimedTicketsData, setClaimedTicketsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [loginId, setLoginId] = useState(null);
@@ -95,13 +105,11 @@ const ShopAccounts = () => {
     }
   }, []);
 
-  // For demo, Net tab stays static
+  // Net static config
   const netConfig = TABLE_CONFIG["net"];
   const netTotals = netConfig.getTotals ? netConfig.getTotals(netConfig.data) : {};
 
-  
-
-  // Fetch dynamic data for Points Summary tab
+  // Fetch Points Summary tab (replace the API url with your actual one!)
   const fetchPointsSummary = async () => {
     setLoading(true);
     setError("");
@@ -111,7 +119,6 @@ const ShopAccounts = () => {
         toDate,
         loginId
       });
-      // Build single row for table
       setPointsSummaryData([
         {
           sr: 1,
@@ -130,13 +137,46 @@ const ShopAccounts = () => {
     setLoading(false);
   };
 
-  // Totals for the dynamic tab (for a single row, same as the values)
+  // Fetch Claimed Tickets tab
+  const fetchClaimedTickets = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/get-claimed-tickets`,
+        { fromDate, toDate, loginId }
+      );
+      // Map for table
+      const mapped = Array.isArray(res.data) ? res.data.map((item, idx) => ({
+        sr: idx + 1,
+        ticketId: item.ticketId || "", // as per controller
+        totalQuantity: item.totalQuantity || 0,
+        winningTickets: Array.isArray(item.ticketNumbers)
+          ? item.ticketNumbers.join(", ")
+          : (item.ticketNumbers || "")
+      })) : [];
+      setClaimedTicketsData(mapped);
+    } catch (err) {
+      setError(err.response?.data?.message || "Something went wrong");
+      setClaimedTicketsData([]);
+    }
+    setLoading(false);
+  };
+
+  // Totals for points tab
   const pointsTotals = pointsSummaryData && pointsSummaryData.length
     ? {
         playAmount: pointsSummaryData.reduce((a, b) => a + Number(b.playAmount || 0), 0),
         winningAmount: pointsSummaryData.reduce((a, b) => a + Number(b.winningAmount || 0), 0),
         commission: pointsSummaryData.reduce((a, b) => a + Number(b.commission || 0), 0),
         netAmount: pointsSummaryData.reduce((a, b) => a + Number(b.netAmount || 0), 0)
+      }
+    : {};
+
+  // Totals for claimed tickets
+  const claimedTotals = claimedTicketsData && claimedTicketsData.length
+    ? {
+        totalQuantity: claimedTicketsData.reduce((a, b) => a + Number(b.totalQuantity || 0), 0)
       }
     : {};
 
@@ -199,6 +239,15 @@ const ShopAccounts = () => {
           {activeTab === "points" && (
             <button
               onClick={fetchPointsSummary}
+              disabled={loading}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-pink-600 hover:to-purple-600 transition-all text-white font-semibold px-6 py-2 rounded-lg shadow-lg ml-auto"
+            >
+              {loading ? "Loading..." : "View"}
+            </button>
+          )}
+          {activeTab === "claimed" && (
+            <button
+              onClick={fetchClaimedTickets}
               disabled={loading}
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-pink-600 hover:to-purple-600 transition-all text-white font-semibold px-6 py-2 rounded-lg shadow-lg ml-auto"
             >
@@ -277,6 +326,32 @@ const ShopAccounts = () => {
                     ))}
                   </tr>
                 </>
+              ) : activeTab === "claimed" && claimedTicketsData && claimedTicketsData.length > 0 ? (
+                <>
+                  {claimedTicketsData.map((row, idx) => (
+                    <tr key={row.sr} className="border-b border-slate-800 hover:bg-slate-800/50 transition-all">
+                      {TABLE_CONFIG.claimed.columns.map(col => (
+                        <td key={col.key} className="px-4 py-2 text-white">
+                          {row[col.key]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  <tr className="bg-slate-800 border-t border-slate-700 font-bold">
+                    <td className="px-4 py-2 text-white">{TABLE_CONFIG.claimed.totalLabel}</td>
+                    <td className="px-4 py-2 text-white"></td>
+                    <td className="px-4 py-2 text-white">
+                      {claimedTotals.totalQuantity || 0}
+                    </td>
+                    <td className="px-4 py-2 text-white"></td>
+                  </tr>
+                </>
+              ) : activeTab === "claimed" && !loading ? (
+                <tr>
+                  <td colSpan={TABLE_CONFIG.claimed.columns.length} className="py-8 text-slate-400">
+                    No claimed tickets for this period.
+                  </td>
+                </tr>
               ) : null}
             </tbody>
           </table>
