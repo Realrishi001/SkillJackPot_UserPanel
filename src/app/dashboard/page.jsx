@@ -184,40 +184,90 @@ export default function Page() {
     setMounted(true); // <-- STEP 2
   }, []);
 
-  const [quantities, setQuantities] = useState(Array(10).fill(0));
-  const [points, setPoints] = useState(Array(10).fill(0));
+  // const [quantities, setQuantities] = useState(Array(10).fill(0));
+  // const [points, setPoints] = useState(Array(10).fill(0));
 
   const [activeTypeFilter, setActiveTypeFilter] = useState(null); // 'all', 'odd', 'even', 'fp', or null
   const [activeColFilter, setActiveColFilter] = useState([]); // '10-19', '30-39', '50-59', or null
 
-  const [transactionInput, setTransactionInput] = useState("");
-  const [claimTicketId, setClaimTicketId] = useState(""); // Or null/undefined initially
-
-
   // Constant Quantity and Points for demo (change values as needed)
-  //const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-  //const [points, setPoints] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // Initial points for each row
-  //const totalQuantity = quantities.reduce((a, b) => a + b, 0);
-  //const totalPoints = points.reduce((a, b) => a + b, 0);
+  const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  const [points, setPoints] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // Initial points for each row
+  const totalQuantity = quantities.reduce((a, b) => a + b, 0);
+  const totalPoints = points.reduce((a, b) => a + b, 0);
 
   const [inputsByCheckBox, setInputsByCheckBox] = useState({});
-  const [updatedQuantity, updatedPoints] = React.useMemo(() => {
-    let qty = Array(10).fill(0);
-    let amt = Array(10).fill(0);
+// Replace your existing useMemo with this:
 
-    Object.values(inputsByCheckBox).forEach((ticket) => {
-      Object.entries(ticket).forEach(([cellKey, value]) => {
-        const [row, col] = cellKey.split("-").map(Number);
-        const n = parseInt(value, 10);
-        if (!isNaN(n) && n > 0) {
-          qty[row] += n;
-          amt[row] += n * 2;
-        }
-      });
-    });
+// Replace your useMemo with this corrected version:
 
-    return [qty, amt];
-  }, [inputsByCheckBox]);
+// 3. Replace with this SINGLE useMemo (remove any others):
+const [updatedQuantity, updatedPoints] = React.useMemo(() => {
+  let qty = Array(10).fill(0);
+  let amt = Array(10).fill(0);
+
+  console.log("=== DEBUGGING CALCULATION ===");
+  console.log("selected state:", selected);
+  console.log("inputsByCheckBox:", inputsByCheckBox);
+
+  // Check if we have any selected checkboxes at all
+  let hasSelected = false;
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 3; col++) {
+      if (selected[row][col]) {
+        hasSelected = true;
+        const num = allNumbers[col][row];
+        const numStr = String(num).padStart(2, "0");
+        
+        console.log(`✓ Processing checkbox: row=${row}, col=${col}, num=${num}, numStr=${numStr}`);
+        
+        // Get all grid values for this checkbox
+        const checkboxInputs = inputsByCheckBox[numStr] || {};
+        console.log(`  Checkbox ${numStr} inputs:`, checkboxInputs);
+        
+        let totalForThisCheckbox = 0;
+        
+        Object.entries(checkboxInputs).forEach(([cellKey, value]) => {
+          console.log(`    Cell ${cellKey}: value="${value}"`);
+          const n = parseInt(value, 10);
+          if (!isNaN(n) && n > 0) {
+            totalForThisCheckbox += n;
+            console.log(`      ✓ Added ${n}, running total: ${totalForThisCheckbox}`);
+          } else {
+            console.log(`      ✗ Skipped value "${value}" (not a positive number)`);
+          }
+        });
+        
+        // Add to the row corresponding to this checkbox
+        qty[row] += totalForThisCheckbox;
+        amt[row] += totalForThisCheckbox * 2;
+        
+        console.log(`  ✓ Final for checkbox ${numStr}: total=${totalForThisCheckbox}, qty[${row}]=${qty[row]}, amt[${row}]=${amt[row]}`);
+      }
+    }
+  }
+
+  if (!hasSelected) {
+    console.log("❌ No checkboxes are selected!");
+  }
+
+  console.log("Final calculated quantities:", qty);
+  console.log("Final calculated amounts:", amt);
+  console.log("=== END DEBUGGING ===");
+
+  return [qty, amt];
+}, [inputsByCheckBox, selected]);// Keep 'selected' in dependency to trigger recalculation when checkboxes change
+  
+
+
+
+
+
+  useEffect(() => {
+  console.log("Updated Quantities:", updatedQuantity);
+  console.log("Updated Points:", updatedPoints);
+}, [updatedQuantity, updatedPoints]);
+
   const totalUpdatedQuantity = updatedQuantity.reduce((a, b) => a + b, 0);
   const totalUpdatedPoints = updatedPoints.reduce((a, b) => a + b, 0);
 
@@ -246,53 +296,20 @@ export default function Page() {
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [maxQuantities, setMaxQuantities] = useState(Array(10).fill(0));
 
-  function getMergedCellOverrides(numStrs) {
-  if (numStrs.length === 0) return {};
 
-  // Get all keys present in any of the selected
-  const allKeys = new Set();
-  numStrs.forEach((num) => {
-    const entries = inputsByCheckBox[num] || {};
-    Object.keys(entries).forEach((key) => allKeys.add(key));
-  });
-
-  const result = {};
-  for (let key of allKeys) {
-    const values = numStrs.map((num) =>
-      (inputsByCheckBox[num] || {})[key] ?? ""
-    );
-    // If all selected checkboxes have the same value for this key, show it; else empty
-    if (values.every((v) => v === values[0])) {
-      result[key] = values[0];
-    } else {
-      result[key] = "";
-    }
-  }
-  return result;
-}
-
-const handleClaimTicket = async () => {
-  try {
-    // Use transactionInput as ticketId if that is how user enters ticketId/barcode
-    const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/save-claimed-ticket`, // Your claimTicket endpoint
-      { ticketId: transactionInput.trim() }
-    );
-    if (res.data.status === "success") {
-      alert("Claimed Successfully!\n" + JSON.stringify(res.data.claimedTicket, null, 2));
-    } else {
-      alert(res.data.message || "Not a winning ticket");
-    }
-  } catch (err) {
-    alert("Error claiming ticket: " + (err?.response?.data?.error || err.message));
-  }
-};
-
+  useEffect(() => {
+  console.log("DEBUG updatedQuantity", updatedQuantity);
+}, [updatedQuantity]);
 
   useEffect(() => {
     localStorage.setItem("updatedQuantity", JSON.stringify(updatedQuantity));
     localStorage.setItem("updatedPoints", JSON.stringify(updatedPoints));
   }, [updatedQuantity, updatedPoints]);
+  useEffect(() => {
+  setQuantities(updatedQuantity);
+  setPoints(updatedPoints);
+}, [updatedQuantity, updatedPoints]);
+
 
   // Handlers:
   const handleRowHeaderChange = (row, value) => {
@@ -373,13 +390,13 @@ const handleClaimTicket = async () => {
     localStorage.setItem("inputsByCheckBox", JSON.stringify(inputsByCheckBox));
   }, [inputsByCheckBox]);
 
-  // useEffect(() => {
-  //   localStorage.setItem("quantities", JSON.stringify(quantities));
-  // }, [quantities]);
+  useEffect(() => {
+    localStorage.setItem("quantities", JSON.stringify(quantities));
+  }, [quantities]);
 
-  // useEffect(() => {
-  //   localStorage.setItem("points", JSON.stringify(points));
-  // }, [points]);
+  useEffect(() => {
+    localStorage.setItem("points", JSON.stringify(points));
+  }, [points]);
 
   useEffect(() => {
     setRemainSecs(getRemainTime()); // Set initial value
@@ -477,21 +494,30 @@ const handleClaimTicket = async () => {
     else if (colKey === "30-39") colIndex = 1;
     else if (colKey === "50-59") colIndex = 2;
 
-    // Toggle this column in the checkbox grid
-    setSelected((prevSelected) => {
-      const newSelected = prevSelected.map((row) => row.slice());
-      const columnSelected = newSelected.every((row) => row[colIndex]);
+    const allSelected = selected.every((rowArr) => rowArr[colIndex]);
+
+    setSelected((prev) => {
+      const copy = prev.map((arr) => arr.slice());
       for (let row = 0; row < 10; row++) {
-        newSelected[row][colIndex] = !columnSelected;
+        copy[row][colIndex] = !allSelected;
       }
+      return copy;
+    });
 
-      // 🟡 Add these lines to recalc and update
-      const { newQuantities, newPoints } =
-        recalcQuantitiesAndPoints(newSelected);
-      setQuantities(newQuantities);
-      setPoints(newPoints);
-
-      return newSelected;
+    setInputsByCheckBox((prev) => {
+      let updated = { ...prev };
+      for (let row = 0; row < 10; row++) {
+        const num = allNumbers[colIndex][row];
+        const numStr = String(num).padStart(2, "0");
+        if (!allSelected) {
+          // Just ensure the object exists, but don't prefill any cell
+          if (!updated[numStr]) updated[numStr] = {};
+        } else {
+          // Deselect: remove entirely
+          delete updated[numStr];
+        }
+      }
+      return updated;
     });
 
     setActiveColFilter((prev) => {
@@ -506,11 +532,17 @@ const handleClaimTicket = async () => {
     setActiveTypeFilter(type);
   };
 
-const resetCheckboxes = () => {
-  // Reset all main state variables
-  setSelected(Array(10).fill(null).map(() => Array(3).fill(false)));
+ const resetCheckboxes = () => {
+  setSelected(
+    Array(10)
+      .fill(null)
+      .map(() => Array(3).fill(false))
+  );
+  
+  // Reset the state variables
   setQuantities(Array(10).fill(0));
   setPoints(Array(10).fill(0));
+  
   setCellOverrides({});
   setInputsByCheckBox({});
   setActiveCheckBox(null);
@@ -523,7 +555,7 @@ const resetCheckboxes = () => {
   setConfirmedTickets([]);
   setShowAdvanceDrawModal(false);
 
-  // Remove all related localStorage keys
+  // Remove localStorage keys
   [
     "selected",
     "quantities",
@@ -532,10 +564,9 @@ const resetCheckboxes = () => {
     "updatedQuantity",
     "updatedPoints",
     "totalUpdatedQuantity",
-    "totalUpdatedPoints"
-  ].forEach(key => localStorage.removeItem(key));
+    "totalUpdatedPoints",
+  ].forEach((key) => localStorage.removeItem(key));
 };
-
 
   useEffect(() => {
     // --- Calculate totals from all checkboxes (inputsByCheckBox) ---
@@ -582,6 +613,7 @@ const resetCheckboxes = () => {
         if (selected[rowIdx][colIdx]) {
           selectedNumbers.push(allNumbers[colIdx][rowIdx]);
         }
+        
       }
     }
 
@@ -622,47 +654,25 @@ const resetCheckboxes = () => {
     console.log("Selected Ticket Numbers:", ticketList);
   }, [selected, cellOverrides]);
 
-const handleGridChange = (row, col, value) => {
-  if (!/^\d*$/.test(value)) return; // only digits or empty
-
-  const cellKey = `${row}-${col}`;
-  let selectedNums = [];
-  for (let rowIdx = 0; rowIdx < selected.length; rowIdx++) {
-    if (selected[rowIdx][col]) {
-      const num = allNumbers[col][rowIdx];
-      selectedNums.push(String(num).padStart(2, "0"));
-    }
-  }
-
-  setInputsByCheckBox((prev) => {
-    let updated = { ...prev };
-
-    if (selectedNums.length > 1) {
-      // Bulk update for all selected
-      selectedNums.forEach((numStr) => {
-        updated[numStr] = {
-          ...(updated[numStr] || {}),
+  const handleGridChange = (row, col, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const cellKey = `${row}-${col}`;
+    // Update visible grid
+    setCellOverrides((overrides) => ({
+      ...overrides,
+      [cellKey]: value,
+    }));
+    // Update inputs for this checkbox
+    if (activeCheckBox) {
+      setInputsByCheckBox((prev) => ({
+        ...prev,
+        [activeCheckBox]: {
+          ...(prev[activeCheckBox] || {}),
           [cellKey]: value,
-        };
-      });
-    } else if (selectedNums.length === 1) {
-      // Single selected
-      updated[selectedNums[0]] = {
-        ...(updated[selectedNums[0]] || {}),
-        [cellKey]: value,
-      };
+        },
+      }));
     }
-    return updated;
-  });
-
-  // If you use cellOverrides for rendering, also update it
-  setCellOverrides((overrides) => ({
-    ...overrides,
-    [cellKey]: value,
-  }));
-};
-
-
+  };
 
   function getCellValue(row, col) {
     const key = `${row}-${col}`;
@@ -798,115 +808,117 @@ const handleGridChange = (row, col, value) => {
     // pdf.save(`receipt_${ticketId}.pdf`);
   };
 
-const handlePrint = async () => {
-  if (!canPrint) {
-    if (remainSecs <= 30) {
-      alert("Print is disabled during the last 30 seconds before draw time!");
-    } else if (totalUpdatedQuantity === 0) {
-      alert("No quantity selected or no tickets to print.");
-    }
-    return;
-  }
-
-  // 1. Build ticket list using the CORRECT mapping
-  let ticketList = [];
-  Object.entries(inputsByCheckBox).forEach(([num, cellMap]) => {
-    Object.entries(cellMap).forEach(([cellIndex, value]) => {
-      if (value && value !== "" && parseInt(value, 10) > 0) {
-        ticketList.push(`${num}-${cellIndex} : ${value}`);
+  const handlePrint = async () => {
+    if (!canPrint) {
+      if (remainSecs <= 30) {
+        alert("Print is disabled during the last 30 seconds before draw time!");
+      } else if (totalUpdatedQuantity === 0) {
+        alert("No quantity selected or no tickets to print.");
       }
+      return;
+    }
+
+    // 1. Build ticket list using the CORRECT mapping
+    let ticketList = [];
+    Object.entries(inputsByCheckBox).forEach(([num, cellMap]) => {
+      Object.entries(cellMap).forEach(([cellIndex, value]) => {
+        if (value && value !== "" && parseInt(value, 10) > 0) {
+          ticketList.push(`${num}-${cellIndex} : ${value}`);
+        }
+      });
     });
-  });
 
-  // 2. Get loginId from JWT
-  const loginId = getLoginIdFromToken();
-  if (!loginId) {
-    alert("User not logged in.");
-    return;
-  }
+    // 2. Get loginId from JWT
+    const loginId = getLoginIdFromToken();
+    if (!loginId) {
+      alert("User not logged in.");
+      return;
+    }
 
-  // 3. Get current date and time (formatted)
-  const gameTime = getFormattedDateTime();
+    // 3. Get current date and time (formatted)
+    const gameTime = getFormattedDateTime();
 
-  // 4. Calculate multiplier and new totals
-  const drawTimesArr = advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot];
-  const multiplier = drawTimesArr.length;
-  const multipliedTotalQuantity = totalUpdatedQuantity * multiplier;
-  const multipliedTotalPoints = totalUpdatedPoints * multiplier;
+    // 4. Calculate multiplier and new totals
+    const drawTimesArr =
+      advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot];
+    const multiplier = drawTimesArr.length;
+    const multipliedTotalQuantity = totalUpdatedQuantity * multiplier;
+    const multipliedTotalPoints = totalUpdatedPoints * multiplier;
 
-  // 5. Prepare data payload
-  const payload = {
-    gameTime,
-    ticketNumber: ticketList.join(", "),
-    totalQuatity: multipliedTotalQuantity,
-    totalPoints: multipliedTotalPoints, // multiplied!
-    loginId,
-    drawTime: drawTimesArr,
-  };
+    // 5. Prepare data payload
+    const payload = {
+      gameTime,
+      ticketNumber: ticketList.join(", "),
+      totalQuatity: multipliedTotalQuantity,
+      totalPoints: multipliedTotalPoints, // multiplied!
+      loginId,
+      drawTime: drawTimesArr,
+    };
 
-  // 6. Send data to backend (save ticket)
-  try {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
-      payload
-    );
-    if (response.status === 201) {
-      const ticketId = response.data.ticketId || response.data.id || Date.now().toString();
-      alert("Tickets saved successfully!");
+    // 6. Send data to backend (save ticket)
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
+        payload
+      );
 
-      // 7. Subtract the balance from admin/shop (use multiplied points)
-      try {
-        const subtractRes = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/subtract-balance`,
-          {
-            id: loginId,
-            amount: multipliedTotalPoints, // use multiplied value!
+      if (response.status === 201) {
+        const ticketId =
+          response.data.ticketId || response.data.id || Date.now().toString();
+        alert("Tickets saved successfully!");
+
+        // 7. Subtract the balance from admin/shop (use multiplied points)
+        try {
+          const subtractRes = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/subtract-balance`,
+            {
+              id: loginId,
+              amount: multipliedTotalPoints, // use multiplied value!
+            }
+          );
+          if (!subtractRes.data.success) {
+            alert(
+              "Warning: Could not subtract balance: " + subtractRes.data.message
+            );
           }
-        );
-        if (!subtractRes.data.success) {
+        } catch (e) {
           alert(
-            "Warning: Could not subtract balance: " + subtractRes.data.message
+            "Error subtracting balance: " +
+              (e?.response?.data?.message || e.message)
           );
         }
-      } catch (e) {
+
+        // 8. Generate and print the receipt (use multiplied values)
+        generatePrintReceipt(
+          {
+            gameTime: gameTime,
+            drawTime: drawTimesArr,
+            loginId: loginId,
+            ticketNumber: ticketList.join(", "),
+            totalQuatity: multipliedTotalQuantity,
+            totalPoints: multipliedTotalPoints,
+          },
+          ticketId
+        );
+
+        // 9. Clear the form after printing
+        resetCheckboxes();
+        setCellOverrides({});
+        setColumnHeaders(Array(10).fill(""));
+        setRowHeaders(Array(10).fill(""));
+      } else {
         alert(
-          "Error subtracting balance: " +
-            (e?.response?.data?.message || e.message)
+          "Failed to save tickets: " +
+            (response.data.message || "Unknown error")
         );
       }
-
-      // 8. Generate and print the receipt (use multiplied values)
-      generatePrintReceipt(
-        {
-          gameTime: gameTime,
-          drawTime: drawTimesArr,
-          loginId: loginId,
-          ticketNumber: ticketList.join(", "),
-          totalQuatity: multipliedTotalQuantity,
-          totalPoints: multipliedTotalPoints,
-        },
-        ticketId
-      );
-
-      // 9. Clear the form after printing
-      resetCheckboxes();
-      setCellOverrides({});
-      setColumnHeaders(Array(10).fill(""));
-      setRowHeaders(Array(10).fill(""));
-    } else {
+    } catch (error) {
       alert(
-        "Failed to save tickets: " +
-          (response.data.message || "Unknown error")
+        "Error saving tickets: " +
+          (error?.response?.data?.message || error.message)
       );
     }
-  } catch (error) {
-    alert(
-      "Error saving tickets: " +
-        (error?.response?.data?.message || error.message)
-    );
-  }
-};
-
+  };
 
   // Calculate total value (sum of all input boxes)
   let totalValue = 0;
@@ -959,14 +971,6 @@ const handlePrint = async () => {
   }
 
   const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
-
-
-  function showNumberInputs(num) {
-  const numStr = String(num).padStart(2, "0");
-  setActiveCheckBox(numStr);
-  setCellOverrides(inputsByCheckBox[numStr] || {});
-}
-
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -1095,6 +1099,7 @@ const handlePrint = async () => {
                 const color = numberBoxColors[row % numberBoxColors.length];
                 return (
                   <div
+                  
                     key={num}
                     className={`relative flex items-center gap-1 px-2 py-1 ${color} hover:scale-105 transition-all duration-200 cursor-pointer`}
                     style={{
@@ -1103,7 +1108,7 @@ const handlePrint = async () => {
                       margin: "0",
                       boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
                     }}
-                    
+                    onClick={() => toggle(row, colIdx)}
                   >
                     {/* Custom Checkbox */}
                     <input
@@ -1128,7 +1133,6 @@ const handlePrint = async () => {
                     <span
                       className="w-10 h-7 flex items-center justify-center font-bold text-md text-[#4A314D] bg-white border-2 border-[#4A314D] rounded select-none transition-all duration-200 hover:bg-gray-50"
                       style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
-                      onClick={() => showNumberInputs(num)} 
                     >
                       {num}
                     </span>
@@ -1272,12 +1276,12 @@ const handlePrint = async () => {
 
                             handleGridChange(row, col, e.target.value);
                           }}
-                          // readOnly={
-                          //   (activeTypeFilter === "even" &&
-                          //     (row * 10 + col) % 2 !== 0) ||
-                          //   (activeTypeFilter === "odd" &&
-                          //     (row * 10 + col) % 2 === 0)
-                          // }
+                          readOnly={
+                            (activeTypeFilter === "even" &&
+                              (row * 10 + col) % 2 !== 0) ||
+                            (activeTypeFilter === "odd" &&
+                              (row * 10 + col) % 2 === 0)
+                          }
                           onClick={() => {
                             if (isFPMode) {
                               const numStr = String(row * 10 + col).padStart(
@@ -1296,13 +1300,13 @@ const handlePrint = async () => {
                     <td className="bg-transparent"></td>
                     <td className="p-1 text-center">
                       <div className="w-16 h-8 rounded-lg bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
-                        {updatedQuantity[row]}
+                        {quantities[row]}
                       </div>
                     </td>
 
                     <td className="p-1 text-center">
                       <div className="w-16 h-8 rounded-lg bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
-                        {updatedPoints[row]}
+                        {points[row]}
                       </div>
                     </td>
                   </tr>
@@ -1337,22 +1341,9 @@ const handlePrint = async () => {
                 type="text"
                 placeholder="Transaction No/Bar Code"
                 className="w-full py-3 px-5 rounded-xl bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
-                value={transactionInput}
-                onChange={(e) => setTransactionInput(e.target.value)}
               />
             </div>
-            <div className="flex-none flex gap-2">
-              {/* Claim Ticket Button */}
-              <button
-                className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={!transactionInput.trim()}
-                onClick={handleClaimTicket}
-              >
-                <TrendingUp className="w-5 h-5" />
-                Claim Ticket
-              </button>
-
-              {/* Advance Draw Button */}
+            <div className="flex-none">
               <button
                 className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
                 onClick={() => setAdvanceModalOpen(true)}
@@ -1362,7 +1353,6 @@ const handlePrint = async () => {
               </button>
             </div>
           </div>
-
         </div>
       </div>
 
