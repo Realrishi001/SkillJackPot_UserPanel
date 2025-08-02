@@ -21,6 +21,9 @@ import JsBarcode from "jsbarcode";
 import AdvanceDrawModal from "../../Components/AdvanceDrawModal/AdvanceDrawModal.jsx";
 import { useRouter } from "next/navigation.js";
 
+// At the top of your component function:
+// { '50': { '00': 1, ... }, '31': {...} }
+
 // Helper for number ranges
 const range = (start, end) =>
   Array.from({ length: end - start + 1 }, (_, k) => k + start);
@@ -120,6 +123,22 @@ function getRemainTime() {
 function setTimerEnd(secs) {
   localStorage.setItem(TIMER_KEY, Date.now() + secs * 1000);
 }
+function recalcQuantitiesAndPoints(selectedState) {
+  // selectedState: 10x3 boolean array
+  const newQuantities = Array(10).fill(0);
+  const newPoints = Array(10).fill(0);
+
+  for (let row = 0; row < 10; row++) {
+    let count = 0;
+    for (let col = 0; col < 3; col++) {
+      if (selectedState[row][col]) count++;
+    }
+    newQuantities[row] = count;
+    newPoints[row] = count * 2;
+  }
+
+  return { newQuantities, newPoints };
+}
 
 export default function Page() {
   useEffect(() => {
@@ -139,16 +158,65 @@ export default function Page() {
       .fill(null)
       .map(() => Array(3).fill(false))
   );
+
+  useEffect(() => {
+    const savedSelected = localStorage.getItem("selected");
+    if (savedSelected) {
+      const parsedSelected = JSON.parse(savedSelected);
+      setSelected(parsedSelected);
+
+      // 🟡 Also recalc quantities/points here
+      const { newQuantities, newPoints } =
+        recalcQuantitiesAndPoints(parsedSelected);
+      setQuantities(newQuantities);
+      setPoints(newPoints);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("selected", JSON.stringify(selected));
+  }, [selected]);
   const [activeFilter, setActiveFilter] = useState(null);
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true); // <-- STEP 2
+  }, []);
+
+  const [quantities, setQuantities] = useState(Array(10).fill(0));
+  const [points, setPoints] = useState(Array(10).fill(0));
 
   const [activeTypeFilter, setActiveTypeFilter] = useState(null); // 'all', 'odd', 'even', 'fp', or null
   const [activeColFilter, setActiveColFilter] = useState([]); // '10-19', '30-39', '50-59', or null
 
   // Constant Quantity and Points for demo (change values as needed)
-  const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-  const [points, setPoints] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // Initial points for each row
-  const totalQuantity = quantities.reduce((a, b) => a + b, 0);
-  const totalPoints = points.reduce((a, b) => a + b, 0);
+  //const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  //const [points, setPoints] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // Initial points for each row
+  //const totalQuantity = quantities.reduce((a, b) => a + b, 0);
+  //const totalPoints = points.reduce((a, b) => a + b, 0);
+
+  const [inputsByCheckBox, setInputsByCheckBox] = useState({});
+  const [updatedQuantity, updatedPoints] = React.useMemo(() => {
+    let qty = Array(10).fill(0);
+    let amt = Array(10).fill(0);
+
+    Object.values(inputsByCheckBox).forEach((ticket) => {
+      Object.entries(ticket).forEach(([cellKey, value]) => {
+        const [row, col] = cellKey.split("-").map(Number);
+        const n = parseInt(value, 10);
+        if (!isNaN(n) && n > 0) {
+          qty[row] += n;
+          amt[row] += n * 2;
+        }
+      });
+    });
+
+    return [qty, amt];
+  }, [inputsByCheckBox]);
+  const totalUpdatedQuantity = updatedQuantity.reduce((a, b) => a + b, 0);
+  const totalUpdatedPoints = updatedPoints.reduce((a, b) => a + b, 0);
+
   const [isFPMode, setIsFPMode] = useState(false);
   const [activeFPSetIndex, setActiveFPSetIndex] = useState(null);
   const [currentDrawSlot, setCurrentDrawSlot] = useState(() =>
@@ -156,6 +224,7 @@ export default function Page() {
   );
   const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
   const [advanceDrawTimes, setAdvanceDrawTimes] = useState([]);
+  const [activeCheckBox, setActiveCheckBox] = useState(null); // Number currently being entered, eg '50' or '31'
 
   const COLS = 10,
     ROWS = 10; // or 9 if that's your grid size
@@ -171,7 +240,12 @@ export default function Page() {
   const [showAdvanceDrawModal, setShowAdvanceDrawModal] = useState(false);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
-  const [maxQuantities, setMaxQuantities] = useState([...quantities]);
+  const [maxQuantities, setMaxQuantities] = useState(Array(10).fill(0));
+
+  useEffect(() => {
+    localStorage.setItem("updatedQuantity", JSON.stringify(updatedQuantity));
+    localStorage.setItem("updatedPoints", JSON.stringify(updatedPoints));
+  }, [updatedQuantity, updatedPoints]);
 
   // Handlers:
   const handleRowHeaderChange = (row, value) => {
@@ -237,6 +311,30 @@ export default function Page() {
   const timerRef = useRef();
 
   useEffect(() => {
+    const savedInputs = localStorage.getItem("inputsByCheckBox");
+    if (savedInputs) setInputsByCheckBox(JSON.parse(savedInputs));
+
+    const savedQuantities = localStorage.getItem("quantities");
+    if (savedQuantities) setQuantities(JSON.parse(savedQuantities));
+
+    const savedPoints = localStorage.getItem("points");
+    if (savedPoints) setPoints(JSON.parse(savedPoints));
+  }, []);
+
+  // --- Save to localStorage on changes ---
+  useEffect(() => {
+    localStorage.setItem("inputsByCheckBox", JSON.stringify(inputsByCheckBox));
+  }, [inputsByCheckBox]);
+
+  // useEffect(() => {
+  //   localStorage.setItem("quantities", JSON.stringify(quantities));
+  // }, [quantities]);
+
+  // useEffect(() => {
+  //   localStorage.setItem("points", JSON.stringify(points));
+  // }, [points]);
+
+  useEffect(() => {
     setRemainSecs(getRemainTime()); // Set initial value
     timerRef.current = setInterval(() => {
       setRemainSecs(getRemainTime());
@@ -263,7 +361,6 @@ export default function Page() {
   const remainTime = `${min}:${sec}`;
   const [confirmedTickets, setConfirmedTickets] = useState([]);
 
-
   const drawTimeObj = new Date(Date.now() + remainSecs * 1000);
   const drawTime = drawTimeObj.toLocaleTimeString([], {
     hour: "2-digit",
@@ -274,38 +371,28 @@ export default function Page() {
   // --- Checkboxes --- //
   const toggle = (row, col, isLeftGrid = false) => {
     const num = allNumbers[col][row];
+    const numStr = String(num).padStart(2, "0");
 
+    // 1. Toggle the checkbox selection state
     setSelected((prev) => {
       const copy = prev.map((arr) => arr.slice());
-      const wasSelected = copy[row][col];
-      copy[row][col] = !wasSelected;
-
-      setQuantities((prevQuantities) => {
-        const updatedQuantities = [...prevQuantities];
-        const selectedCount = copy[row].filter((selected) => selected).length;
-        updatedQuantities[row] = selectedCount;
-
-        // 💡 Update maxQuantities only if current is greater
-        setMaxQuantities((prevMax) => {
-          const updatedMax = [...prevMax];
-          if (selectedCount > prevMax[row]) {
-            updatedMax[row] = selectedCount;
-          }
-          return updatedMax;
-        });
-
-        // Recalculate points
-        setPoints((prevPoints) => {
-          const updatedPoints = [...prevPoints];
-          updatedPoints[row] = selectedCount * 2;
-          return updatedPoints;
-        });
-
-        return updatedQuantities;
-      });
-
+      copy[row][col] = !copy[row][col];
       return copy;
     });
+
+    // 2. Set the active checkbox for the grid input
+    setActiveCheckBox(numStr);
+
+    // 3. Ensure there's a mapping for this checkbox in inputsByCheckBox
+    setInputsByCheckBox((prev) => {
+      if (!(numStr in prev)) {
+        return { ...prev, [numStr]: {} };
+      }
+      return prev;
+    });
+
+    // 4. Show the current grid state for this checkbox
+    setCellOverrides(inputsByCheckBox[numStr] || {});
   };
 
   useEffect(() => {
@@ -337,83 +424,106 @@ export default function Page() {
   }, [activeFilter]);
 
   // --- Column/Range Filters for F7/F8/F9 --- //
-const handleFilter = (colKey) => {
-  // Determine which column index we are toggling
-  let colIndex = null;
-  if (colKey === "10-19") colIndex = 0;
-  else if (colKey === "30-39") colIndex = 1;
-  else if (colKey === "50-59") colIndex = 2;
+  const handleFilter = (colKey) => {
+    let colIndex = null;
+    if (colKey === "10-19") colIndex = 0;
+    else if (colKey === "30-39") colIndex = 1;
+    else if (colKey === "50-59") colIndex = 2;
 
-  // Toggle this column in the checkbox grid
-  setSelected((prevSelected) => {
-    const newSelected = prevSelected.map(row => row.slice());
-    // Check if this column is already fully selected
-    const columnSelected = newSelected.every(row => row[colIndex]);
-    for (let row = 0; row < 10; row++) {
-      newSelected[row][colIndex] = !columnSelected; // toggle
-    }
-    return newSelected;
-  });
+    // Toggle this column in the checkbox grid
+    setSelected((prevSelected) => {
+      const newSelected = prevSelected.map((row) => row.slice());
+      const columnSelected = newSelected.every((row) => row[colIndex]);
+      for (let row = 0; row < 10; row++) {
+        newSelected[row][colIndex] = !columnSelected;
+      }
 
-  // Toggle the button highlight (multi-select)
-  setActiveColFilter((prev) => {
-    const set = new Set(prev);
-    if (set.has(colKey)) set.delete(colKey);
-    else set.add(colKey);
-    return Array.from(set);
-  });
-};
+      // 🟡 Add these lines to recalc and update
+      const { newQuantities, newPoints } =
+        recalcQuantitiesAndPoints(newSelected);
+      setQuantities(newQuantities);
+      setPoints(newPoints);
 
+      return newSelected;
+    });
 
+    setActiveColFilter((prev) => {
+      const set = new Set(prev);
+      if (set.has(colKey)) set.delete(colKey);
+      else set.add(colKey);
+      return Array.from(set);
+    });
+  };
 
   const handleOddEvenFP = (type) => {
     setActiveTypeFilter(type);
   };
 
-  const resetCheckboxes = () => {
-    setSelected(
-      Array(10)
-        .fill(null)
-        .map(() => Array(3).fill(false))
-    );
-    setQuantities(Array(10).fill(0)); // Reset quantities
-    setPoints(Array(10).fill(0)); // Reset points
-    setActiveTypeFilter(null);
-    setActiveColFilter(null);
-    setCellOverrides({});
-    setColumnHeaders(Array(10).fill(""));
-    setRowHeaders(Array(10).fill(""));
-  };
- 
+const resetCheckboxes = () => {
+  // Reset all main state variables
+  setSelected(Array(10).fill(null).map(() => Array(3).fill(false)));
+  setQuantities(Array(10).fill(0));
+  setPoints(Array(10).fill(0));
+  setCellOverrides({});
+  setInputsByCheckBox({});
+  setActiveCheckBox(null);
+  setActiveTypeFilter("all");
+  setActiveColFilter([]);
+  setRowHeaders(Array(10).fill(""));
+  setColumnHeaders(Array(10).fill(""));
+  setMaxQuantities(Array(10).fill(0));
+  setAdvanceDrawTimes([]);
+  setConfirmedTickets([]);
+  setShowAdvanceDrawModal(false);
+
+  // Remove all related localStorage keys
+  [
+    "selected",
+    "quantities",
+    "points",
+    "inputsByCheckBox",
+    "updatedQuantity",
+    "updatedPoints",
+    "totalUpdatedQuantity",
+    "totalUpdatedPoints"
+  ].forEach(key => localStorage.removeItem(key));
+};
+
 
   useEffect(() => {
-    // 1. Quantities per row
-    console.log("Quantities per row:", quantities);
-
-    // 2. Sum of all input values (totalValue)
+    // --- Calculate totals from all checkboxes (inputsByCheckBox) ---
     let totalValue = 0;
-    Object.entries(cellOverrides).forEach(([key, val]) => {
-      const [row, col] = key.split("-").map(Number);
-      const num = row * 10 + col;
-      const isEven = num % 2 === 0;
-      const isOdd = !isEven;
+    let updatedQuantity = Array(10).fill(0);
+    let updatedPoints = Array(10).fill(0);
 
-      if (
-        (activeTypeFilter === "even" && isOdd) ||
-        (activeTypeFilter === "odd" && isEven)
-      ) {
-        return; // skip invalid input
-      }
-
-      const parsed = parseInt(val, 10);
-      if (!isNaN(parsed)) totalValue += parsed;
+    Object.values(inputsByCheckBox).forEach((inputs) => {
+      Object.entries(inputs).forEach(([key, v]) => {
+        const [row, col] = key.split("-").map(Number);
+        const val = parseInt(v, 10);
+        if (!isNaN(val)) {
+          totalValue += val;
+          updatedQuantity[row] += val;
+          updatedPoints[row] += val * 2;
+        }
+      });
     });
-    console.log("Total value:", totalValue);
 
-    // 3. Updated quantity column: [totalValue * q for each q in quantities]
-    const updatedQuantity = quantities.map((q) => totalValue * q);
+    // --- Save to localStorage ---
+    localStorage.setItem("inputsByCheckBox", JSON.stringify(inputsByCheckBox));
+    localStorage.setItem(
+      "totalUpdatedQuantity",
+      updatedQuantity.reduce((a, b) => a + b, 0)
+    );
+    localStorage.setItem(
+      "totalUpdatedPoints",
+      updatedPoints.reduce((a, b) => a + b, 0)
+    );
+
+    // --- Optional: For your debugging ---
+    console.log("Quantities per row:", updatedQuantity);
+    console.log("Total value:", totalValue);
     console.log("Updated quantity:", updatedQuantity);
-  }, [quantities, cellOverrides]);
+  }, [inputsByCheckBox]);
 
   useEffect(() => {
     let ticketList = [];
@@ -467,88 +577,35 @@ const handleFilter = (colKey) => {
 
   const handleGridChange = (row, col, value) => {
     if (!/^\d*$/.test(value)) return;
-
-    const numStr = String(row * 10 + col).padStart(2, "0");
-    if (
-      isFPMode &&
-      activeFPSetIndex !== null &&
-      FP_SETS[activeFPSetIndex].includes(numStr)
-    ) {
-      // Update all cells in the active FP set
-      setCellOverrides((overrides) => {
-        const updated = { ...overrides };
-        FP_SETS[activeFPSetIndex].forEach((setNum) => {
-          // Find all cells in the grid matching this setNum
-          for (let r = 0; r < 10; r++) {
-            for (let c = 0; c < 10; c++) {
-              if (String(r * 10 + c).padStart(2, "0") === setNum) {
-                updated[`${r}-${c}`] = value;
-              }
-            }
-          }
-        });
-
-        let sum = 0;
-        Object.values(updated).forEach((v) => {
-          const num = parseInt(v, 10);
-          if (!isNaN(num)) sum += num;
-        });
-        console.log("Sum of all input values:", sum);
-        return updated;
-      });
-    } else {
-      setCellOverrides((overrides) => {
-        const updated = {
-          ...overrides,
-          [`${row}-${col}`]: value,
-        };
-        // --- Calculate sum of all input values and print ---
-        let sum = 0;
-        Object.values(updated).forEach((v) => {
-          const num = parseInt(v, 10);
-          if (!isNaN(num)) sum += num;
-        });
-        console.log("Sum of all input values:", sum);
-        return updated;
-      });
+    const cellKey = `${row}-${col}`;
+    // Update visible grid
+    setCellOverrides((overrides) => ({
+      ...overrides,
+      [cellKey]: value,
+    }));
+    // Update inputs for this checkbox
+    if (activeCheckBox) {
+      setInputsByCheckBox((prev) => ({
+        ...prev,
+        [activeCheckBox]: {
+          ...(prev[activeCheckBox] || {}),
+          [cellKey]: value,
+        },
+      }));
     }
   };
 
   function getCellValue(row, col) {
     const key = `${row}-${col}`;
-    const cellNum = row * 10 + col;
-    const isEven = cellNum % 2 === 0;
-    const isOdd = !isEven;
-
-    // Step 1: Block values if filter doesn't allow it
-    if (
-      (activeTypeFilter === "even" && isOdd) ||
-      (activeTypeFilter === "odd" && isEven)
-    ) {
-      return ""; // 🛑 Don't display anything
-    }
-
-    // Step 2: Return override value if exists
     if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
       return cellOverrides[key];
     }
-
-    // Step 3: Compute sum from headers
-    const rowHeader = rowHeaders[row];
-    const colHeader = columnHeaders[col];
-    if (rowHeader === "" || colHeader === "") return "";
-
-    const rowVal = parseInt(rowHeader, 10);
-    const colVal = parseInt(colHeader, 10);
-    if (isNaN(rowVal) || isNaN(colVal)) return "";
-
-    return rowVal + colVal;
+    return "";
   }
 
   function getFPSetIndexForNumber(numStr) {
     return FP_SETS.findIndex((set) => set.includes(numStr));
   }
-
 
   function getLoginIdFromToken() {
     const token = localStorage.getItem("userToken");
@@ -673,14 +730,14 @@ const handleFilter = (colKey) => {
   };
 
   const handlePrint = async () => {
-     if (!canPrint) {
-    if (remainSecs <= 30) {
-      alert("Print is disabled during the last 30 seconds before draw time!");
-    } else if (totalUpdatedQuantity === 0) {
-      alert("No quantity selected or no tickets to print.");
+    if (!canPrint) {
+      if (remainSecs <= 30) {
+        alert("Print is disabled during the last 30 seconds before draw time!");
+      } else if (totalUpdatedQuantity === 0) {
+        alert("No quantity selected or no tickets to print.");
+      }
+      return;
     }
-    return;
-  }
     // 1. Gather ticket numbers in your required format
     let ticketList = [];
     let selectedNumbers = [];
@@ -692,7 +749,7 @@ const handleFilter = (colKey) => {
       }
     }
     // Save current tickets to confirmed list
-setConfirmedTickets((prev) => [...prev, ...ticketList]);
+    setConfirmedTickets((prev) => [...prev, ...ticketList]);
 
     let filledCells = [];
     for (let row = 0; row < 10; row++) {
@@ -728,7 +785,6 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
     const drawTimesArr =
       advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot];
     const multiplier = drawTimesArr.length;
-
     const multipliedTotalQuantity = totalUpdatedQuantity * multiplier;
     const multipliedTotalPoints = totalUpdatedPoints * multiplier;
 
@@ -736,7 +792,7 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
     const payload = {
       gameTime,
       ticketNumber: confirmedTickets.join(", "),
-      totalQuatity: multipliedTotalQuantity, // multiplied!
+      totalQuatity: multipliedTotalQuantity,
       totalPoints: multipliedTotalPoints, // multiplied!
       loginId,
       drawTime: drawTimesArr,
@@ -809,33 +865,32 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
 
   // Calculate total value (sum of all input boxes)
   let totalValue = 0;
+
   Object.values(cellOverrides).forEach((v) => {
     const num = parseInt(v, 10);
     if (!isNaN(num)) totalValue += num;
   });
 
   // Calculate updatedQuantity array
-  const updatedQuantity = maxQuantities.map((q) => totalValue * q);
-  const updatedPoints = updatedQuantity.map((q) => q * 2);
-
-  const totalUpdatedQuantity = updatedQuantity.reduce(
-    (sum, val) => sum + val,
-    0
-  );
-  const totalUpdatedPoints = updatedPoints.reduce((sum, val) => sum + val, 0);
+  // const updatedQuantity = maxQuantities.map((q) => totalValue * q);
+  // const updatedPoints = updatedQuantity.map((q) => q * 2);
+  // const totalUpdatedQuantity = updatedQuantity.reduce(
+  //   (sum, val) => sum + val,
+  //   0
+  // );
+  //const totalUpdatedPoints = updatedPoints.reduce((sum, val) => sum + val, 0);
 
   function getRowColForNumber(num) {
-  for (let col = 0; col < allNumbers.length; col++) {
-    for (let row = 0; row < allNumbers[col].length; row++) {
-      if (allNumbers[col][row] === num) {
-        return [row, col];
+    for (let col = 0; col < allNumbers.length; col++) {
+      for (let row = 0; row < allNumbers[col].length; row++) {
+        if (allNumbers[col][row] === num) {
+          return [row, col];
+        }
       }
     }
+    return null;
   }
-  return null;
-}
 
-  
   // Sum of values in a row
   function getRowSum(row) {
     let sum = 0;
@@ -858,7 +913,7 @@ setConfirmedTickets((prev) => [...prev, ...ticketList]);
     return sum;
   }
 
-const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
+  const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -916,7 +971,6 @@ const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
           >
             FP
           </button>
-
         </div>
         {/* Remain Time Section */}
         <div className="flex items-center gap-2 px-6 py-1 bg-slate-800/80 rounded border border-red-500/30 shadow-lg mb-4 sm:mb-0">
@@ -925,7 +979,7 @@ const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
             Remain Time
           </span>
           <span className="text-lg sm:text-xl font-mono font-bold text-red-400 bg-slate-900/50 px-3 py-1 rounded-lg">
-            {remainTime}
+            {mounted ? remainTime : "00:00"}
           </span>
         </div>
 
@@ -968,7 +1022,8 @@ const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
                 onClick={() => handleFilter(tab.key)}
                 className={`px-4 py-1 rounded font-bold text-md text-white
                 ${
-                  Array.isArray(activeColFilter) && activeColFilter.includes(tab.key)
+                  Array.isArray(activeColFilter) &&
+                  activeColFilter.includes(tab.key)
                     ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
                     : "bg-gradient-to-r from-purple-500 to-pink-500"
                 }
@@ -1031,14 +1086,14 @@ const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
 
           {/* Enhanced Action Buttons */}
           <div className="flex gap-3 mt-6">
-          <button
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-            onClick={handlePrint}
-            disabled={!canPrint}
-          >
-            <Printer className="w-5 h-5" />
-            Print
-          </button>
+            <button
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={handlePrint}
+              disabled={!canPrint}
+            >
+              <Printer className="w-5 h-5" />
+              Print
+            </button>
             <button
               onClick={resetCheckboxes}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95"
