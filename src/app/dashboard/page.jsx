@@ -43,6 +43,8 @@ const isPrime = (n) => {
   return true;
 };
 
+
+
 // --- Timer & Date Helpers --- //
 function getTodayDateString() {
   const d = new Date();
@@ -142,6 +144,25 @@ export default function Page() {
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
 
 
+    
+function selectAllInColumn(colIdx) {
+  setSelected(prev => {
+    const newSelected = prev.map(rowArr =>
+      rowArr.map((checked, cIdx) => (cIdx === colIdx ? true : false))
+    );
+    const newQuantities = newSelected.map(rowArr => rowArr.filter(Boolean).length);
+    setQuantities(newQuantities);
+    setPoints(newQuantities.map(q => q * 2));
+    return newSelected;
+  });
+}
+
+
+  const colKeyToIndex = { "10-19": 0, "30-39": 1, "50-59": 2 };
+
+  function handleColButton(colKey) {
+    selectAllInColumn(colKeyToIndex[colKey]);
+  }
 
   // Handlers:
   const handleRowHeaderChange = (row, value) => {
@@ -258,49 +279,43 @@ useEffect(() => {
       }
       if (e.key === "F7") {
         e.preventDefault();
-        handleFilter("10-19");
+        selectAllInColumn(0); // 10-19
       }
       if (e.key === "F8") {
         e.preventDefault();
-        handleFilter("30-39");
+        selectAllInColumn(1); // 30-39
       }
       if (e.key === "F9") {
         e.preventDefault();
-        handleFilter("50-59");
+        selectAllInColumn(2); // 50-59
       }
       if (e.key === "F6") {
         e.preventDefault();
         handlePrint();
       }
     }
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line
   }, [activeFilter]);
 
   // --- Column/Range Filters for F7/F8/F9 --- //
-  const handleFilter = (colKey) => {
-    if (activeColFilter === colKey) {
-      setActiveColFilter(null);
-      if (!activeTypeFilter) resetCheckboxes();
-      else applyFilter(activeTypeFilter, null);
-      return;
-    }
-    setActiveColFilter(colKey);
-    applyFilter(activeTypeFilter, colKey);
-  };
+const handleFilter = (colKey) => {
+  setActiveColFilter(colKey);
+  applyFilter(activeTypeFilter, colKey); // This is fine!
+};
 
-  const handleOddEvenFP = (type) => {
-    if (activeTypeFilter === type) {
-      setActiveTypeFilter(null);
-      // If both filters are off, reset all
-      if (!activeColFilter) resetCheckboxes();
-      else applyFilter(null, activeColFilter);
-      return;
-    }
-    setActiveTypeFilter(type);
-    applyFilter(type, activeColFilter);
-  };
+
+const handleOddEvenFP = (type) => {
+  if (activeTypeFilter === type) {
+    setActiveTypeFilter(null);
+    return; // Do nothing else!
+  }
+  setActiveTypeFilter(type);
+  // Do not call applyFilter or resetCheckboxes here!
+};
+
 
 
   const resetCheckboxes = () => {
@@ -419,17 +434,29 @@ useEffect(() => {
     }
   };
 
-  function getCellValue(row, col) {
-    const key = `${row}-${col}`;
-    if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
-      return cellOverrides[key];
-    }
-
-    const rowValue = parseInt(rowHeaders[row] || "0", 10);
-    const colValue = parseInt(columnHeaders[col] || "0", 10);
-    const sum = rowValue + colValue;
-    return sum === 0 ? "" : sum; // Display empty if sum is zero, else sum
+function getCellValue(row, col) {
+  const num = row * 10 + col;
+  const numStr = String(num).padStart(2, "0");
+  // Filtering blank logic
+  if (
+    (activeTypeFilter === "even" && num % 2 !== 0) ||
+    (activeTypeFilter === "odd" && num % 2 === 0) ||
+    (activeTypeFilter === "fp" && !FP_SETS.flat().includes(numStr))
+  ) {
+    return "";
   }
+
+  const key = `${row}-${col}`;
+  if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
+    return cellOverrides[key];
+  }
+
+  const rowValue = parseInt(rowHeaders[row] || "0", 10);
+  const colValue = parseInt(columnHeaders[col] || "0", 10);
+  const sum = rowValue + colValue;
+  return sum === 0 ? "" : sum;
+}
+
 
   function getFPSetIndexForNumber(numStr) {
     return FP_SETS.findIndex(set => set.includes(numStr));
@@ -796,7 +823,7 @@ const payload = {
           ].map((tab, i) => (
             <button
               key={tab.key}
-              onClick={() => handleFilter(tab.key)}
+              onClick={() => handleColButton(tab.key)}
               className={`px-4 py-1 rounded font-bold text-md text-white
           ${activeFilter === tab.key
                   ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
@@ -936,23 +963,49 @@ const payload = {
                       <td key={col} className="p-1 text-center border-r border-slate-700/20 last:border-r-0">
                         <div className="text-[11px] text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
                         <input
-                          type="text"
-                          className={`w-12 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
-                    ${isFPMode && activeFPSetIndex !== null && FP_SETS[activeFPSetIndex].includes(String(row * 10 + col).padStart(2, "0"))
-                              ? 'bg-green-600/80 border-green-300 ring-2 ring-green-300'
-                              : ''
-                            }`}
-                          maxLength={2}
-                          value={getCellValue(row, col)}
-                          onChange={(e) => handleGridChange(row, col, e.target.value)}
-                          onClick={() => {
-                            if (isFPMode) {
-                              const numStr = String(row * 10 + col).padStart(2, "0");
-                              const setIdx = getFPSetIndexForNumber(numStr);
-                              setActiveFPSetIndex(setIdx !== -1 ? setIdx : null);
-                            }
-                          }}
-                        />
+  type="text"
+  className={`w-12 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
+    ${isFPMode && activeFPSetIndex !== null && FP_SETS[activeFPSetIndex].includes(String(row * 10 + col).padStart(2, "0"))
+      ? 'bg-green-600/80 border-green-300 ring-2 ring-green-300'
+      : ''
+    }
+    ${
+      (activeTypeFilter === "even" && (row * 10 + col) % 2 !== 0) ||
+      (activeTypeFilter === "odd" && (row * 10 + col) % 2 === 0) ||
+      (activeTypeFilter === "fp" && !FP_SETS.flat().includes(String(row * 10 + col).padStart(2, "0")))
+        ? "opacity-50 cursor-not-allowed"
+        : ""
+    }
+  `}
+  maxLength={2}
+  value={getCellValue(row, col)}
+  onChange={(e) => {
+    const num = row * 10 + col;
+    const numStr = String(num).padStart(2, "0");
+    // Odd/Even/FP blocking logic
+    if (
+      (activeTypeFilter === "even" && num % 2 !== 0) ||
+      (activeTypeFilter === "odd" && num % 2 === 0) ||
+      (activeTypeFilter === "fp" && !FP_SETS.flat().includes(numStr))
+    ) {
+      return; // Block input
+    }
+    handleGridChange(row, col, e.target.value);
+  }}
+  readOnly={
+    (activeTypeFilter === "even" && (row * 10 + col) % 2 !== 0) ||
+    (activeTypeFilter === "odd" && (row * 10 + col) % 2 === 0) ||
+    (activeTypeFilter === "fp" && !FP_SETS.flat().includes(String(row * 10 + col).padStart(2, "0")))
+  }
+  onClick={() => {
+    if (isFPMode) {
+      const numStr = String(row * 10 + col).padStart(2, "0");
+      const setIdx = getFPSetIndexForNumber(numStr);
+      setActiveFPSetIndex(setIdx !== -1 ? setIdx : null);
+    }
+  }}
+/>
+
                       </td>
                     ))}
                     <td className="bg-transparent"></td>
