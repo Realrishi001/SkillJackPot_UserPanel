@@ -319,7 +319,7 @@ export default function ShowResult({ drawTime }) {
     axios
       .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
         drawTime: getBackendDrawTime(drawTime),
-        adminId: 1,
+        adminId: 4,
       })
       .then((res) => {
         let tickets = [];
