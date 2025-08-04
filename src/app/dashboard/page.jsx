@@ -178,9 +178,20 @@ function selectAllInColumn(colIdx) {
 
   const colKeyToIndex = { "10-19": 0, "30-39": 1, "50-59": 2 };
 
-  function handleColButton(colKey) {
-    selectAllInColumn(colKeyToIndex[colKey]);
+function handleColButton(colKey) {
+  const colIndex = colKeyToIndex[colKey];
+
+  if (activeFilter === colKey) {
+    // If the same button is clicked again, deselect it
+    setActiveFilter(null);
+    resetCheckboxes(); // Clear selections
+  } else {
+    // If it's a new column button
+    setActiveFilter(colKey);
+    selectAllInColumn(colIndex);
   }
+}
+
 
   // Handlers:
 const handleRowHeaderChange = (row, value) => {
@@ -308,7 +319,7 @@ useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === "F10") {
         e.preventDefault();
-        resetCheckboxes();
+        window.location.reload();
       }
       if (e.key === "F7") {
         e.preventDefault();
@@ -944,7 +955,8 @@ const handlePrint = async () => {
             </button>
 
             <button
-              onClick={resetCheckboxes}
+              onClick={() => window.location.reload()}
+
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95"
             >
               <RotateCcw className="w-5 h-5" />
@@ -986,8 +998,8 @@ const handlePrint = async () => {
                     <td key={`col-header-${col}`} className="p-1 text-center border-r border-slate-700/20 last:border-r-0">
                       <input
                         type="text"
-                        className="w-12 h-6 rounded bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
-                        maxLength={2}
+                        className="w-16 h-6 rounded bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
+                        maxLength={3}
                         value={columnHeaders[col]}
                         onChange={(e) => handleColumnHeaderChange(col, e.target.value)}
                       />
@@ -1004,8 +1016,8 @@ const handlePrint = async () => {
                     <div className="text-xs text-white font-bold py-2"></div>
                       <input
                         type="text"
-                        className="w-12 h-6 rounded bg-lime-900/80 text-lime-200 border-2 border-lime-400/40 text-center font-bold shadow focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 outline-none transition-all duration-200 hover:border-lime-300"
-                        maxLength={2}
+                        className="w-16 h-6 rounded bg-lime-900/80 text-lime-200 border-2 border-lime-400/40 text-center font-bold shadow focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 outline-none transition-all duration-200 hover:border-lime-300"
+                        maxLength={3}
                         value={rowHeaders[row]}
                         onChange={(e) => handleRowHeaderChange(row, e.target.value)}
                       />
@@ -1017,7 +1029,7 @@ const handlePrint = async () => {
                         <div className="text-[11px] text-white font-bold">{String(row * 10 + col).padStart(2, '0')}</div>
                         <input
   type="text"
-  className={`w-12 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
+  className={`w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
     ${isFPMode && activeFPSetIndex !== null && FP_SETS[activeFPSetIndex].includes(String(row * 10 + col).padStart(2, "0"))
       ? 'bg-green-600/80 border-green-300 ring-2 ring-green-300'
       : ''
@@ -1030,21 +1042,31 @@ const handlePrint = async () => {
         : ""
     }
   `}
-  maxLength={2}
+  maxLength={3}
   value={getCellValue(row, col)}
-  onChange={(e) => {
-    const num = row * 10 + col;
-    const numStr = String(num).padStart(2, "0");
-    // Odd/Even/FP blocking logic
-    if (
-      (activeTypeFilter === "even" && num % 2 !== 0) ||
-      (activeTypeFilter === "odd" && num % 2 === 0) ||
-      (activeTypeFilter === "fp" && !FP_SETS.flat().includes(numStr))
-    ) {
-      return; // Block input
-    }
-    handleGridChange(row, col, e.target.value);
-  }}
+onChange={(e) => {
+  const input = e.target.value;
+
+  // Allow only numbers between 000 and 999
+  if (!/^\d{0,3}$/.test(input)) return;
+  const numeric = parseInt(input, 10);
+  if (numeric > 999) return;
+
+  const num = row * 10 + col;
+  const numStr = String(num).padStart(2, "0");
+
+  // Block based on active filter (odd, even, FP)
+  if (
+    (activeTypeFilter === "even" && num % 2 !== 0) ||
+    (activeTypeFilter === "odd" && num % 2 === 0) ||
+    (activeTypeFilter === "fp" && !FP_SETS.flat().includes(numStr))
+  ) {
+    return;
+  }
+
+  handleGridChange(row, col, input);
+}}
+
   readOnly={
     (activeTypeFilter === "even" && (row * 10 + col) % 2 !== 0) ||
     (activeTypeFilter === "odd" && (row * 10 + col) % 2 === 0) ||
