@@ -143,6 +143,7 @@ export default function Page() {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
 
+  const [transactionInput, setTransactionInput] = useState("");
 
     
 function selectAllInColumn(colIdx) {
@@ -156,6 +157,23 @@ function selectAllInColumn(colIdx) {
     return newSelected;
   });
 }
+
+  const handleClaimTicket = async () => {
+    try {
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/save-claimed-ticket`,
+        { ticketId: transactionInput.trim() }
+      );
+      if (res.data.status === "success") {
+        alert("Claimed Successfully!\n" + JSON.stringify(res.data.claimedTicket, null, 2));
+      } else {
+        alert(res.data.message || "Not a winning ticket");
+      }
+    } catch (err) {
+      alert("Error claiming ticket: " + (err?.response?.data?.error || err.message));
+    }
+  };
+
 
 
   const colKeyToIndex = { "10-19": 0, "30-39": 1, "50-59": 2 };
@@ -628,6 +646,16 @@ pdf.text(drawTimeText, 5, 38);
 
   // to print and save the data
 const handlePrint = async () => {
+  // Prevent print if not allowed (remainSecs ≤ 30 or totalUpdatedQuantity is 0)
+  if (remainSecs <= 30) {
+    alert("Print is disabled during the last 30 seconds before draw time!");
+    return;
+  }
+  if (totalUpdatedQuantity === 0) {
+    alert("No quantity selected or no tickets to print.");
+    return;
+  }
+
   // 1. Gather ticket numbers in your required format
   let ticketList = [];
   let selectedNumbers = [];
@@ -666,41 +694,43 @@ const handlePrint = async () => {
   const gameTime = getFormattedDateTime();
 
   // 4. Prepare data payload
-const payload = {
-  gameTime,
-  ticketNumber: ticketList.join(', '),
-  totalQuatity: totalUpdatedQuantity,
-  totalPoints: totalUpdatedPoints,
-  loginId,
-  drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
-};
+  const payload = {
+    gameTime,
+    ticketNumber: ticketList.join(', '),
+    totalQuatity: totalUpdatedQuantity,
+    totalPoints: totalUpdatedPoints,
+    loginId,
+    drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+  };
 
   // 5. Send data to backend
   try {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`, payload);
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
+      payload
+    );
     if (response.status === 201) {
       // Get ticket ID from response (adjust based on your backend response structure)
       const ticketId = response.data.ticketId || response.data.id || Date.now().toString();
-      
+
       alert("Tickets saved successfully!");
-      
+
       // Generate and print the receipt with dynamic ticket ID
       generatePrintReceipt({
-  gameTime: gameTime,
-  drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],  // ✅ Array of draw times
-  loginId: loginId,
-  ticketNumber: ticketList.join(', '),
-  totalQuatity: totalUpdatedQuantity,
-  totalPoints: totalUpdatedPoints
-}, ticketId);
+        gameTime: gameTime,
+        drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+        loginId: loginId,
+        ticketNumber: ticketList.join(', '),
+        totalQuatity: totalUpdatedQuantity,
+        totalPoints: totalUpdatedPoints
+      }, ticketId);
 
-      
       // Clear the form after printing
       resetCheckboxes();
       setCellOverrides({});
       setColumnHeaders(Array(10).fill(""));
       setRowHeaders(Array(10).fill(""));
-      
+
     } else {
       alert("Failed to save tickets: " + (response.data.message || 'Unknown error'));
     }
@@ -737,6 +767,9 @@ const payload = {
     }
     return sum;
   }
+
+  const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -899,12 +932,17 @@ const payload = {
 
           {/* Enhanced Action Buttons */}
           <div className="flex gap-3 mt-6">
-            <button className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95"
+            <button
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
+                !canPrint ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               onClick={handlePrint}
+              disabled={!canPrint}
             >
               <Printer className="w-5 h-5" />
               Print
             </button>
+
             <button
               onClick={resetCheckboxes}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95"
@@ -1060,22 +1098,34 @@ const payload = {
 
           {/* Enhanced Footer */}
           <div className="flex items-center mt-6 gap-3 p-3 bg-slate-800/30 rounded-xl border border-slate-700/50">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Transaction No/Bar Code"
-                className="w-full py-3 px-5 rounded-xl bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
-              />
-            </div>
-            <div className="flex-none">
-              <button
-  className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
-  onClick={() => setAdvanceModalOpen(true)}
->
-  <Zap className="w-5 h-5" />
-  Advance Draw
-</button>
-            </div>
+<div className="flex-1">
+  <input
+    type="text"
+    placeholder="Transaction No/Bar Code"
+    value={transactionInput}
+    onChange={(e) => setTransactionInput(e.target.value)}
+    className="w-full py-3 px-5 rounded-xl bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
+  />
+</div>
+<div className="flex-none flex gap-2">
+  <button
+    className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
+    disabled={!transactionInput.trim()}
+    onClick={handleClaimTicket}
+  >
+    <TrendingUp className="w-5 h-5" />
+    Claim Ticket
+  </button>
+
+  <button
+    className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
+    onClick={() => setAdvanceModalOpen(true)}
+  >
+    <Zap className="w-5 h-5" />
+    Advance Draw
+  </button>
+</div>
+
           </div>
         </div>
 
