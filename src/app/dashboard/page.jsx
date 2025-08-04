@@ -165,41 +165,56 @@ function selectAllInColumn(colIdx) {
   }
 
   // Handlers:
-  const handleRowHeaderChange = (row, value) => {
-    if (!/^-?\d*$/.test(value)) return;
-    setRowHeaders(headers =>
-      headers.map((v, i) => (i === row ? value : v))
-    );
-    if (value !== "") {
-      setCellOverrides(overrides => {
-        const updated = { ...overrides };
-        for (let col = 0; col < 10; col++) {
-          const key = `${row}-${col}`;
-          const prev = parseInt(updated[key], 10) || 0;
-          updated[key] = String(prev + parseInt(value, 10));
-        }
-        return updated;
-      });
-    }
-  };
+const handleRowHeaderChange = (row, value) => {
+  if (!/^-?\d*$/.test(value)) return;
+  setRowHeaders(headers =>
+    headers.map((v, i) => (i === row ? value : v))
+  );
+  setCellOverrides(overrides => {
+    const updated = { ...overrides };
+    if (value === "") {
+      // If header is cleared, clear the whole row
+      for (let col = 0; col < 10; col++) {
+        updated[`${row}-${col}`] = "";
+      }
+    } else {
+      for (let col = 0; col < 10; col++) {
+        const key = `${row}-${col}`;
+        const prev = parseInt(updated[key], 10) || 0;
+       updated[key] = String((parseInt(updated[key], 10) || 0) + parseInt(value, 10));
 
-  const handleColumnHeaderChange = (col, value) => {
-    if (!/^-?\d*$/.test(value)) return;
-    setColumnHeaders(headers =>
-      headers.map((v, i) => (i === col ? value : v))
-    );
-    if (value !== "") {
-      setCellOverrides(overrides => {
-        const updated = { ...overrides };
-        for (let row = 0; row < 10; row++) {
-          const key = `${row}-${col}`;
-          const prev = parseInt(updated[key], 10) || 0;
-          updated[key] = String(prev + parseInt(value, 10));
-        }
-        return updated;
-      });
+      }
     }
-  };
+    return updated;
+  });
+};
+
+
+const handleColumnHeaderChange = (col, value) => {
+  if (!/^-?\d*$/.test(value)) return;
+  setColumnHeaders(headers =>
+    headers.map((v, i) => (i === col ? value : v))
+  );
+  setCellOverrides(overrides => {
+    const updated = { ...overrides };
+    // If Backspace/Clear, clear the whole column
+    if (value === "") {
+      for (let row = 0; row < 10; row++) {
+        updated[`${row}-${col}`] = "";
+      }
+    } else {
+      // Otherwise, add value as before
+      for (let row = 0; row < 10; row++) {
+        const key = `${row}-${col}`;
+        const prev = parseInt(updated[key], 10) || 0;
+        updated[key] = String((parseInt(updated[key], 10) || 0) + parseInt(value, 10));
+
+      }
+    }
+    return updated;
+  });
+};
+
 
 
   // --- Timer logic ---
