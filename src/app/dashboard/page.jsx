@@ -130,6 +130,8 @@ export default function Page() {
     }
   }, []);
 
+
+
   const [selected, setSelected] = useState(
     Array(10)
       .fill(null)
@@ -172,6 +174,67 @@ export default function Page() {
   const [activeFButtons, setActiveFButtons] = useState([]); // Example: ["10-19", "30-39"]
 
   const [allFColumnsSelected, setAllFColumnsSelected] = useState(false);
+const [activeNumberBox, setActiveNumberBox] = useState({ row: null, col: null });
+
+  const [activeCheckbox, setActiveCheckbox] = useState(null); 
+  const [checkboxInputs, setCheckboxInputs] = useState({}); 
+  const [activeColGroup, setActiveColGroup] = useState(null); 
+
+
+    // Calculates row-wise quantity and points for all checked numbers (checkboxInputs)
+const updatedQuantity = range(0, 9).map(row => {
+  let total = 0;
+  for (let col = 0; col < 3; col++) {
+    if (selected[row][col]) {
+      const num = allNumbers[col][row]; // number like 53, 54, etc.
+      const inputs = checkboxInputs[num] || {};
+      // Sum all input values for this number
+      for (const key in inputs) {
+        const v = parseInt(inputs[key], 10);
+        if (!isNaN(v)) total += v;
+      }
+    }
+  }
+  return total;
+});
+
+// Amounts: Change formula if you want, right now just double of quantity
+const updatedPoints = updatedQuantity.map(q => q * 2);
+
+function toggleNumberBox(row, col) {
+  setActiveNumberBox({ row, col });
+}
+
+  // SAVE on every change
+useEffect(() => {
+  localStorage.setItem('checkboxInputs', JSON.stringify(checkboxInputs));
+}, [checkboxInputs]);
+
+// LOAD on mount
+useEffect(() => {
+  const savedInputs = localStorage.getItem('checkboxInputs');
+  if (savedInputs) {
+    setCheckboxInputs(JSON.parse(savedInputs));
+  }
+}, []);
+
+function selectByTypeFilter(type) {
+  // type: "all" | "odd" | "even"
+  setSelected(prev => {
+    return prev.map((rowArr, row) =>
+      rowArr.map((_, col) => {
+        const num = allNumbers[col][row];
+        if (type === "all") return true;
+        if (type === "odd") return num % 2 === 1;
+        if (type === "even") return num % 2 === 0;
+        return false;
+      })
+    );
+  });
+  setActiveCheckbox(null);
+  setActiveColGroup(null);
+}
+
 
 function selectAllInColumn(colIdx) {
   setSelected((prev) => {
@@ -234,6 +297,9 @@ function selectAllInColumn(colIdx) {
         row.map((val, idx) => (idx === colIndex ? true : val))
       )
     );
+
+    setActiveColGroup(colKey);
+    setActiveCheckbox(null); 
   }
 
   // Handlers:
@@ -439,45 +505,50 @@ function selectAllInColumn(colIdx) {
     console.log("Updated quantity:", updatedQuantity);
   }, [quantities, cellOverrides]);
 
-  useEffect(() => {
-    let ticketList = [];
+useEffect(() => {
+  let ticketList = [];
 
-    // 1. Get all selected numbers (from checkboxes)
-    let selectedNumbers = [];
-    for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
-      for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
-        if (selected[rowIdx][colIdx]) {
-          selectedNumbers.push(allNumbers[colIdx][rowIdx]);
-        }
+  // 1. Get all selected numbers (from checkboxes)
+  let selectedNumbers = [];
+  for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
+    for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
+      if (selected[rowIdx][colIdx]) {
+        selectedNumbers.push(allNumbers[colIdx][rowIdx]);
       }
     }
+  }
 
-    // 2. Get all input cells with values
-    let filledCells = [];
-    for (let row = 0; row < 10; row++) {
-      for (let col = 0; col < 10; col++) {
-        const key = `${row}-${col}`;
-        const value = cellOverrides[key];
-        if (value && value !== "") {
-          // This is the fix:
-          const cellNum = row * 10 + col;
-          filledCells.push({
-            cellIndex: String(cellNum).padStart(2, "0"),
-            value,
-          });
-        }
+  // 2. Get all input cells with values
+  let filledCells = [];
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 10; col++) {
+      const key = `${row}-${col}`;
+      const value = cellOverrides[key];
+      if (value && value !== "") {
+        // This is the fix:
+        const cellNum = row * 10 + col;
+        filledCells.push({
+          cellIndex: String(cellNum).padStart(2, "0"),
+          value,
+        });
       }
     }
+  }
 
-    // 3. For every selected number and every filled input, create the ticket
-    selectedNumbers.forEach((num) => {
-      filledCells.forEach((cell) => {
-        ticketList.push(`${num}-${cell.cellIndex} : ${cell.value}`);
-      });
+  // 3. For every selected number and every filled input, create the ticket
+  selectedNumbers.forEach((num) => {
+    filledCells.forEach((cell) => {
+      ticketList.push(`${num}-${cell.cellIndex} : ${cell.value}`);
     });
+  });
 
-    console.log("Selected Ticket Numbers:", ticketList);
-  }, [selected, cellOverrides]);
+  // Log to console
+  console.log("Selected Ticket Numbers:", ticketList);
+
+  // Save to localStorage
+  localStorage.setItem("ticketList", JSON.stringify(ticketList));
+}, [selected, cellOverrides]);
+
 
   const handleGridChange = (row, col, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -828,9 +899,9 @@ function selectAllInColumn(colIdx) {
   });
 
   // Calculate updatedQuantity array
-  const updatedQuantity = quantities.map((q) => totalValue * q);
+  // const updatedQuantity = quantities.map((q) => totalValue * q);
 
-  const updatedPoints = updatedQuantity.map((q) => q * 2);
+  // const updatedPoints = updatedQuantity.map((q) => q * 2);
 
   const totalUpdatedQuantity = updatedQuantity.reduce(
     (sum, val) => sum + val,
@@ -851,6 +922,8 @@ function selectAllInColumn(colIdx) {
 
   const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
 
+
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       <div className="w-full h-fit">
@@ -862,36 +935,67 @@ function selectAllInColumn(colIdx) {
         {/* Filter Buttons */}
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-4 justify-center ">
-          <button
-            onClick={() => handleOddEvenFP("all")}
-            className={`px-4 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              activeTypeFilter === "all"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => handleOddEvenFP("even")}
-            className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              activeTypeFilter === "even"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-            }`}
-          >
-            Even
-          </button>
-          <button
-            onClick={() => handleOddEvenFP("odd")}
-            className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              activeTypeFilter === "odd"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-            }`}
-          >
-            Odd
-          </button>
+<button
+  onClick={() => {
+    if (activeTypeFilter === "all") {
+      setActiveTypeFilter(null);
+      setActiveCheckbox(null);
+      setActiveColGroup(null);
+    } else {
+      setActiveTypeFilter("all");
+      setActiveCheckbox(null);
+      setActiveColGroup(null);
+    }
+  }}
+  className={`px-4 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+    activeTypeFilter === "all"
+      ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
+      : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+  }`}
+>
+  All
+</button>
+<button
+  onClick={() => {
+    if (activeTypeFilter === "even") {
+      setActiveTypeFilter(null);
+      setActiveCheckbox(null);
+      setActiveColGroup(null);
+    } else {
+      setActiveTypeFilter("even");
+      setActiveCheckbox(null);
+      setActiveColGroup(null);
+    }
+  }}
+  className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+    activeTypeFilter === "even"
+      ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
+      : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+  }`}
+>
+  Even
+</button>
+<button
+  onClick={() => {
+    if (activeTypeFilter === "odd") {
+      setActiveTypeFilter(null);
+      setActiveCheckbox(null);
+      setActiveColGroup(null);
+    } else {
+      setActiveTypeFilter("odd");
+      setActiveCheckbox(null);
+      setActiveColGroup(null);
+    }
+  }}
+  className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
+    activeTypeFilter === "odd"
+      ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
+      : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+  }`}
+>
+  Odd
+</button>
+
           <button
             onClick={() => {
               setIsFPMode((fp) => !fp);
@@ -985,13 +1089,33 @@ function selectAllInColumn(colIdx) {
                       margin: "0",
                       boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
                     }}
-                    onClick={() => toggle(row, colIdx)}
                   >
                     {/* Custom Checkbox */}
                     <input
                       type="checkbox"
                       checked={selected[row][colIdx]}
-                      onChange={() => toggle(row, colIdx)}
+                       onChange={() => {
+  const checkboxNum = allNumbers[colIdx][row];
+  const isChecked = selected[row][colIdx];
+
+  toggle(row, colIdx);
+
+if (!isChecked) {
+  // If we are checking (ticking) the box
+  setActiveCheckbox(checkboxNum);
+} else {
+  // If we are unchecking, remove values for this number
+  setCheckboxInputs(prev => {
+    const updated = { ...prev };
+    delete updated[checkboxNum];
+    return updated;
+  });
+  if (activeCheckbox === checkboxNum) {
+    setActiveCheckbox(null);
+  }
+}
+}}
+        
                       className="peer appearance-none w-6 h-6 rounded bg-white border-2 border-[#4A314D] checked:bg-gradient-to-r checked:from-purple-600 checked:to-pink-600 checked:border-purple-600 flex-shrink-0 transition-all duration-200 hover:scale-110"
                       style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
                     />
@@ -1007,12 +1131,23 @@ function selectAllInColumn(colIdx) {
                     </span>
                     {/* Enhanced Number Box */}
                     <span
-                      className="w-10 h-7 flex items-center justify-center font-bold text-md text-[#4A314D] bg-white border-2 border-[#4A314D] rounded select-none transition-all duration-200 hover:bg-gray-50"
-                      style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
-                    >
-                      {num}
-                    </span>
-                  </div>
+                    onClick={e => {
+                        e.stopPropagation();
+                        toggleNumberBox(row, colIdx);
+                        setActiveCheckbox(num); 
+                        setActiveColGroup(null); 
+                      }}
+                    className={`w-10 h-7 flex items-center justify-center font-bold text-md border-2 border-[#4A314D] rounded select-none transition-all duration-200 cursor-pointer
+                      ${activeNumberBox.row === row && activeNumberBox.col === colIdx
+                        ? 'bg-purple-700 text-white'
+                        : 'bg-white text-[#4A314D]'
+                      }
+                    `}
+                    style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
+                  >
+                    {num}
+                  </span>
+              </div>
                 );
               })
             )}
@@ -1032,7 +1167,10 @@ function selectAllInColumn(colIdx) {
             </button>
 
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {window.location.reload()
+                setCheckboxInputs({});
+                localStorage.removeItem('checkboxInputs');
+              }}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95"
             >
               <RotateCcw className="w-5 h-5" />
@@ -1120,9 +1258,9 @@ function selectAllInColumn(colIdx) {
                         <div className="text-[11px] text-white font-bold">
                           {String(row * 10 + col).padStart(2, "0")}
                         </div>
-                        <input
-                          type="text"
-                          className={`w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
+                       <input
+  type="text"
+  className={`w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
     ${
       isFPMode &&
       activeFPSetIndex !== null &&
@@ -1141,54 +1279,63 @@ function selectAllInColumn(colIdx) {
         : ""
     }
   `}
-                          maxLength={3}
-                          value={getCellValue(row, col)}
-                          onChange={(e) => {
-                            const input = e.target.value;
+  maxLength={3}
+value={
+  activeCheckbox && checkboxInputs[activeCheckbox]
+    ? checkboxInputs[activeCheckbox][`${row * 10 + col}`] || ""
+    : activeColGroup
+      ? (() => {
+          let colIdx;
+          if (activeColGroup === "10-19") colIdx = 0;
+          else if (activeColGroup === "30-39") colIdx = 1;
+          else if (activeColGroup === "50-59") colIdx = 2;
+          const num = allNumbers[colIdx][row];
+          return (checkboxInputs[num] && checkboxInputs[num][`${row * 10 + col}`]) || "";
+        })()
+      : ""
+}
 
-                            // Allow only numbers between 000 and 999
-                            if (!/^\d{0,3}$/.test(input)) return;
-                            const numeric = parseInt(input, 10);
-                            if (numeric > 999) return;
+onChange={(e) => {
+  const input = e.target.value;
+  if (!/^\d{0,3}$/.test(input)) return;
+  if (parseInt(input, 10) > 999) return;
+  const inputIndex = `${row * 10 + col}`;
 
-                            const num = row * 10 + col;
-                            const numStr = String(num).padStart(2, "0");
+  if (activeColGroup) {
+    // Find the numbers in the active column group
+    let colIdx;
+    if (activeColGroup === "10-19") colIdx = 0;
+    else if (activeColGroup === "30-39") colIdx = 1;
+    else if (activeColGroup === "50-59") colIdx = 2;
+    const nums = allNumbers[colIdx];
 
-                            // Block based on active filter (odd, even, FP)
-                            if (
-                              (activeTypeFilter === "even" && num % 2 !== 0) ||
-                              (activeTypeFilter === "odd" && num % 2 === 0) ||
-                              (activeTypeFilter === "fp" &&
-                                !FP_SETS.flat().includes(numStr))
-                            ) {
-                              return;
-                            }
+    // Update that inputIndex for every number in this column group
+    setCheckboxInputs((prev) => {
+      const updated = { ...prev };
+      nums.forEach((num) => {
+        updated[num] = {
+          ...(updated[num] || {}),
+          [inputIndex]: input,
+        };
+      });
+      return updated;
+    });
+  } else if (activeCheckbox) {
+    // Solo checkbox logic
+    setCheckboxInputs((prev) => ({
+      ...prev,
+      [activeCheckbox]: {
+        ...(prev[activeCheckbox] || {}),
+        [inputIndex]: input,
+      },
+    }));
+  }
+}}
 
-                            handleGridChange(row, col, input);
-                          }}
-                          readOnly={
-                            (activeTypeFilter === "even" &&
-                              (row * 10 + col) % 2 !== 0) ||
-                            (activeTypeFilter === "odd" &&
-                              (row * 10 + col) % 2 === 0) ||
-                            (activeTypeFilter === "fp" &&
-                              !FP_SETS.flat().includes(
-                                String(row * 10 + col).padStart(2, "0")
-                              ))
-                          }
-                          onClick={() => {
-                            if (isFPMode) {
-                              const numStr = String(row * 10 + col).padStart(
-                                2,
-                                "0"
-                              );
-                              const setIdx = getFPSetIndexForNumber(numStr);
-                              setActiveFPSetIndex(
-                                setIdx !== -1 ? setIdx : null
-                              );
-                            }
-                          }}
-                        />
+disabled={!activeCheckbox && !activeColGroup}
+
+/>
+
                       </td>
                     ))}
                     <td className="bg-transparent"></td>
