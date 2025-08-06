@@ -271,6 +271,34 @@ export default function Page() {
       return updated;
     });
   }
+  function clearFPHighlights() {
+    // Remove highlight class from all cells
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < 10; col++) {
+        const numStr = String(row * 10 + col).padStart(2, "0");
+        // You can use refs or direct DOM manipulation here
+        const element = document.querySelector(`[data-index="${numStr}"]`);
+        if (element) {
+          element.classList.remove("fp-highlight");
+        }
+      }
+    }
+  }
+
+  function highlightFPSet(setIndex) {
+    // First clear any existing highlights
+    clearFPHighlights();
+
+    if (setIndex === -1 || setIndex === null) return;
+
+    // Highlight all cells in the FP set
+    FP_SETS[setIndex].forEach((numStr) => {
+      const element = document.querySelector(`[data-index="${numStr}"]`);
+      if (element) {
+        element.classList.add("fp-highlight");
+      }
+    });
+  }
 
   const handleClaimTicket = async () => {
     try {
@@ -616,56 +644,58 @@ export default function Page() {
     }
   };
 
-function getTicketList() {
-  let ticketSet = new Set();
-  
-  // Get all selected numbers
-  let selectedNumbers = [];
-  for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
-    for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
-      if (selected[rowIdx][colIdx]) {
-        const num = allNumbers[colIdx][rowIdx];
-        selectedNumbers.push(num);
-        
-        // Check checkboxInputs for this number
-        if (checkboxInputs[num]) {
-          Object.entries(checkboxInputs[num]).forEach(
-            ([cellIndex, value]) => {
-              if (value && value !== "0" && value !== "") {
-                ticketSet.add(`${num}-${cellIndex.padStart(2, "0")} : ${value}`);
+  function getTicketList() {
+    let ticketSet = new Set();
+
+    // Get all selected numbers
+    let selectedNumbers = [];
+    for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
+      for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
+        if (selected[rowIdx][colIdx]) {
+          const num = allNumbers[colIdx][rowIdx];
+          selectedNumbers.push(num);
+
+          // Check checkboxInputs for this number
+          if (checkboxInputs[num]) {
+            Object.entries(checkboxInputs[num]).forEach(
+              ([cellIndex, value]) => {
+                if (value && value !== "0" && value !== "") {
+                  ticketSet.add(
+                    `${num}-${cellIndex.padStart(2, "0")} : ${value}`
+                  );
+                }
               }
-            }
-          );
+            );
+          }
         }
       }
     }
-  }
-  
-  // Now check cellOverrides (from row/column headers and FP mode)
-  let filledCells = [];
-  for (let row = 0; row < 10; row++) {
-    for (let col = 0; col < 10; col++) {
-      const key = `${row}-${col}`;
-      const value = cellOverrides[key];
-      if (value && value !== "" && value !== "0") {
-        const cellNum = row * 10 + col;
-        filledCells.push({
-          cellIndex: String(cellNum).padStart(2, "0"),
-          value,
-        });
+
+    // Now check cellOverrides (from row/column headers and FP mode)
+    let filledCells = [];
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < 10; col++) {
+        const key = `${row}-${col}`;
+        const value = cellOverrides[key];
+        if (value && value !== "" && value !== "0") {
+          const cellNum = row * 10 + col;
+          filledCells.push({
+            cellIndex: String(cellNum).padStart(2, "0"),
+            value,
+          });
+        }
       }
     }
-  }
-  
-  // For every selected number and every filled cell from cellOverrides, create tickets
-  selectedNumbers.forEach((num) => {
-    filledCells.forEach((cell) => {
-      ticketSet.add(`${num}-${cell.cellIndex} : ${cell.value}`);
+
+    // For every selected number and every filled cell from cellOverrides, create tickets
+    selectedNumbers.forEach((num) => {
+      filledCells.forEach((cell) => {
+        ticketSet.add(`${num}-${cell.cellIndex} : ${cell.value}`);
+      });
     });
-  });
-  
-  return Array.from(ticketSet);
-}
+
+    return Array.from(ticketSet);
+  }
   function getCellValue(row, col) {
     const num = row * 10 + col;
     const numStr = String(num).padStart(2, "0");
@@ -1048,14 +1078,15 @@ function getTicketList() {
 
           <button
             onClick={() => {
+              setIsFPMode(!isFPMode);
               if (isFPMode) {
-                const numStr = String(row * 10 + col).padStart(2, "0");
-                const setIdx = getFPSetIndexForNumber(numStr);
-                setActiveFPSetIndex(setIdx !== -1 ? setIdx : null);
+                // If turning off FP mode, clear highlights
+                clearFPHighlights();
+                setActiveFPSetIndex(null);
               }
             }}
             className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              activeTypeFilter === "fp"
+              isFPMode
                 ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
                 : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
             }`}
@@ -1315,6 +1346,7 @@ function getTicketList() {
                         </div>
                         <input
                           type="text"
+                          data-index={String(row * 10 + col).padStart(2, "0")}
                           className={`w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
     ${
       isFPMode &&
@@ -1322,15 +1354,7 @@ function getTicketList() {
       FP_SETS[activeFPSetIndex].includes(
         String(row * 10 + col).padStart(2, "0")
       )
-        ? "bg-green-600/80 border-green-300 ring-2 ring-green-300"
-        : ""
-    }
-    ${
-      (activeTypeFilter === "even" && (row * 10 + col) % 2 !== 0) ||
-      (activeTypeFilter === "odd" && (row * 10 + col) % 2 === 0) ||
-      (activeTypeFilter === "fp" &&
-        !FP_SETS.flat().includes(String(row * 10 + col).padStart(2, "0")))
-        ? "opacity-50 cursor-not-allowed"
+        ? "fp-highlight"
         : ""
     }
   `}
@@ -1364,6 +1388,25 @@ function getTicketList() {
                                 })()
                               : ""
                           }
+                          onClick={(e) => {
+                            if (isFPMode) {
+                              const numStr = String(row * 10 + col).padStart(
+                                2,
+                                "0"
+                              );
+                              const setIdx = getFPSetIndexForNumber(numStr);
+
+                              if (setIdx !== -1) {
+                                // If this cell belongs to an FP set
+                                setActiveFPSetIndex(setIdx);
+                                highlightFPSet(setIdx);
+                              } else {
+                                // If clicked cell is not in any FP set
+                                setActiveFPSetIndex(null);
+                                clearFPHighlights();
+                              }
+                            }
+                          }}
                           onChange={(e) => {
                             const input = e.target.value;
                             if (!/^\d{0,3}$/.test(input)) return;
@@ -1374,28 +1417,29 @@ function getTicketList() {
                               "0"
                             );
 
-                            // Check if we're in FP mode and clicking on an FP cell
+                            // If in FP mode and this cell is part of the active FP set
                             if (
                               isFPMode &&
                               activeFPSetIndex !== null &&
                               FP_SETS[activeFPSetIndex].includes(numStr)
                             ) {
                               // Update all cells in the active FP set
-                              setCellOverrides((overrides) => {
-                                const updated = { ...overrides };
-                                FP_SETS[activeFPSetIndex].forEach((setNum) => {
-                                  for (let r = 0; r < 10; r++) {
-                                    for (let c = 0; c < 10; c++) {
-                                      if (
-                                        String(r * 10 + c).padStart(2, "0") ===
-                                        setNum
-                                      ) {
-                                        updated[`${r}-${c}`] = input;
-                                      }
-                                    }
-                                  }
-                                });
-                                return updated;
+                              FP_SETS[activeFPSetIndex].forEach((setNum) => {
+                                // Find the input element and update its value
+                                const element = document.querySelector(
+                                  `[data-index="${setNum}"]`
+                                );
+                                if (element) {
+                                  element.value = input;
+                                }
+
+                                // Also update your state/cellOverrides
+                                const r = Math.floor(parseInt(setNum) / 10);
+                                const c = parseInt(setNum) % 10;
+                                setCellOverrides((prev) => ({
+                                  ...prev,
+                                  [`${r}-${c}`]: input,
+                                }));
                               });
                             } else if (activeColGroup) {
                               // Your existing column group logic
@@ -1427,36 +1471,14 @@ function getTicketList() {
                               }));
                             } else {
                               // If no special mode is active, just update cellOverrides directly
-                              setCellOverrides((overrides) => ({
-                                ...overrides,
+                              setCellOverrides((prev) => ({
+                                ...prev,
                                 [`${row}-${col}`]: input,
                               }));
                             }
                           }}
-                          onClick={() => {
-                            if (isFPMode) {
-                              const numStr = String(row * 10 + col).padStart(
-                                2,
-                                "0"
-                              );
-                              const setIdx = FP_SETS.findIndex((set) =>
-                                set.includes(numStr)
-                              );
-                              setActiveFPSetIndex(
-                                setIdx !== -1 ? setIdx : null
-                              );
-                            }
-                          }}
                           disabled={
-                            (!activeCheckbox && !activeColGroup && !isFPMode) ||
-                            (activeTypeFilter === "even" &&
-                              (row * 10 + col) % 2 !== 0) ||
-                            (activeTypeFilter === "odd" &&
-                              (row * 10 + col) % 2 === 0) ||
-                            (activeTypeFilter === "fp" &&
-                              !FP_SETS.flat().includes(
-                                String(row * 10 + col).padStart(2, "0")
-                              ))
+                            !activeCheckbox && !activeColGroup && !isFPMode
                           }
                         />
                       </td>
@@ -1538,6 +1560,13 @@ function getTicketList() {
         setSelectedTimes={setAdvanceDrawTimes}
         onConfirm={(selected) => setAdvanceDrawTimes(selected)}
       />
+      <style jsx>{`
+        .fp-highlight {
+          background-color: rgba(34, 197, 94, 0.3) !important;
+          border: 2px solid #22c55e !important;
+          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5) !important;
+        }
+      `}</style>
 
       <div>
         <Navbar />
