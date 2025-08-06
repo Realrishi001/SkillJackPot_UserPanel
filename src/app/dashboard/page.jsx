@@ -121,6 +121,8 @@ function setTimerEnd(secs) {
   localStorage.setItem(TIMER_KEY, Date.now() + secs * 1000);
 }
 
+
+
 export default function Page() {
   const router = useRouter();
 
@@ -350,48 +352,34 @@ export default function Page() {
   }
 
   // Handlers:
-   const handleRowHeaderChange = (row, value) => {
-    if (!/^-?\d*$/.test(value)) return;
-    setRowHeaders((headers) => headers.map((v, i) => (i === row ? value : v)));
-    setCellOverrides((overrides) => {
-      const updated = { ...overrides };
-      if (value === "") {
-        // If header is cleared, clear the whole row
-        for (let col = 0; col < 10; col++) {
-          updated[`${row}-${col}`] = "";
-        }
-      } else {
-        // Set the value directly, don't add
-        for (let col = 0; col < 10; col++) {
-          const key = `${row}-${col}`;
-          updated[key] = value;
-        }
+const handleRowHeaderChange = (row, value) => {
+  if (!/^-?\d*$/.test(value)) return;
+  setRowHeaders((headers) => headers.map((v, i) => (i === row ? value : v)));
+  setCellOverrides((overrides) => {
+    const updated = { ...overrides };
+    for (let col = 0; col < 10; col++) {
+      if (!isCellDisabled(row, col)) {  // Only update if NOT disabled
+        updated[`${row}-${col}`] = value;
       }
-      return updated;
-    });
-  };
-  const handleColumnHeaderChange = (col, value) => {
-    if (!/^-?\d*$/.test(value)) return;
-    setColumnHeaders((headers) =>
-      headers.map((v, i) => (i === col ? value : v))
-    );
-    setCellOverrides((overrides) => {
-      const updated = { ...overrides };
-      if (value === "") {
-        // If Backspace/Clear, clear the whole column
-        for (let row = 0; row < 10; row++) {
-          updated[`${row}-${col}`] = "";
-        }
-      } else {
-        // Set the value directly, don't add
-        for (let row = 0; row < 10; row++) {
-          const key = `${row}-${col}`;
-          updated[key] = value;
-        }
+    }
+    return updated;
+  });
+};
+
+const handleColumnHeaderChange = (col, value) => {
+  if (!/^-?\d*$/.test(value)) return;
+  setColumnHeaders((headers) => headers.map((v, i) => (i === col ? value : v)));
+  setCellOverrides((overrides) => {
+    const updated = { ...overrides };
+    for (let row = 0; row < 10; row++) {
+      if (!isCellDisabled(row, col)) {  // Only update if NOT disabled
+        updated[`${row}-${col}`] = value;
       }
-      return updated;
-    });
-  };
+    }
+    return updated;
+  });
+};
+
 
   // --- Timer logic ---
   const [remainSecs, setRemainSecs] = useState(() => getRemainTime());
@@ -693,28 +681,18 @@ export default function Page() {
 
     return Array.from(ticketSet);
   }
-  function getCellValue(row, col) {
-    const num = row * 10 + col;
-    const numStr = String(num).padStart(2, "0");
-    // Filtering blank logic
-    if (
-      (activeTypeFilter === "even" && num % 2 !== 0) ||
-      (activeTypeFilter === "odd" && num % 2 === 0) ||
-      (activeTypeFilter === "fp" && !FP_SETS.flat().includes(numStr))
-    ) {
-      return "";
-    }
-
-    const key = `${row}-${col}`;
-    if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
-      return cellOverrides[key];
-    }
-
-    const rowValue = parseInt(rowHeaders[row] || "0", 10);
-    const colValue = parseInt(columnHeaders[col] || "0", 10);
-    const sum = rowValue + colValue;
-    return sum === 0 ? "" : sum;
+function getCellValue(row, col) {
+  const rowValue = parseInt(rowHeaders[row] || "0", 10);
+  const colValue = parseInt(columnHeaders[col] || "0", 10);
+  // Only add if both headers are set
+  if (rowHeaders[row] && columnHeaders[col]) {
+    return rowValue + colValue;
   }
+  // Otherwise, show whichever is set (or blank)
+  if (rowHeaders[row]) return rowValue;
+  if (columnHeaders[col]) return colValue;
+  return "";
+}
 
   function getFPSetIndexForNumber(numStr) {
     return FP_SETS.findIndex((set) => set.includes(numStr));
@@ -1007,6 +985,14 @@ export default function Page() {
   console.log("activeTypeFilter:", activeTypeFilter);
   console.log("activeCheckbox:", activeCheckbox, "activeColGroup:", activeColGroup);
 }, [activeTypeFilter, activeCheckbox, activeColGroup]);
+
+function isCellDisabled(row, col) {
+  if (isFPMode) return false;
+  if (activeTypeFilter === "odd") return !isOddIndex(row, col);
+  if (activeTypeFilter === "even") return !isEvenIndex(row, col);
+  if (activeTypeFilter === "all") return false;
+  return (!activeCheckbox && !activeColGroup);
+}
 
   
   const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
@@ -1351,7 +1337,7 @@ export default function Page() {
                         <div className="text-[11px] text-white font-bold">
                           {String(row * 10 + col).padStart(2, "0")}
                         </div>
-                      <input
+<input
   type="text"
   data-index={String(row * 10 + col).padStart(2, "0")}
   className={`
@@ -1378,30 +1364,12 @@ export default function Page() {
                 ? false
                 : (!activeCheckbox && !activeColGroup)
       )
-        ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-70"
+        ? "bg-gray-200 text-transparent cursor-not-allowed opacity-70"
         : ""
     }
   `}
   maxLength={3}
-  value={
-    cellOverrides[`${row}-${col}`] !== undefined && cellOverrides[`${row}-${col}`] !== ""
-      ? cellOverrides[`${row}-${col}`]
-      : activeCheckbox && checkboxInputs[activeCheckbox]
-        ? checkboxInputs[activeCheckbox][`${row * 10 + col}`] || ""
-        : activeColGroup
-          ? (() => {
-              let colIdx;
-              if (activeColGroup === "10-19") colIdx = 0;
-              else if (activeColGroup === "30-39") colIdx = 1;
-              else if (activeColGroup === "50-59") colIdx = 2;
-              const num = allNumbers[colIdx][row];
-              return (
-                (checkboxInputs[num] && checkboxInputs[num][`${row * 10 + col}`]) ||
-                ""
-              );
-            })()
-          : ""
-  }
+  value={getCellValue(row, col)}
   onClick={(e) => {
     if (isFPMode) {
       const numStr = String(row * 10 + col).padStart(2, "0");
@@ -1483,6 +1451,7 @@ export default function Page() {
             : (!activeCheckbox && !activeColGroup)
   }
 />
+
 
                       </td>
                     ))}
