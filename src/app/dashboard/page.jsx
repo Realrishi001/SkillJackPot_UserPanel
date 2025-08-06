@@ -350,7 +350,7 @@ export default function Page() {
   }
 
   // Handlers:
-  const handleRowHeaderChange = (row, value) => {
+   const handleRowHeaderChange = (row, value) => {
     if (!/^-?\d*$/.test(value)) return;
     setRowHeaders((headers) => headers.map((v, i) => (i === row ? value : v)));
     setCellOverrides((overrides) => {
@@ -361,17 +361,15 @@ export default function Page() {
           updated[`${row}-${col}`] = "";
         }
       } else {
+        // Set the value directly, don't add
         for (let col = 0; col < 10; col++) {
           const key = `${row}-${col}`;
-          updated[key] = String(
-            (parseInt(updated[key], 10) || 0) + parseInt(value, 10)
-          );
+          updated[key] = value;
         }
       }
       return updated;
     });
   };
-
   const handleColumnHeaderChange = (col, value) => {
     if (!/^-?\d*$/.test(value)) return;
     setColumnHeaders((headers) =>
@@ -385,11 +383,10 @@ export default function Page() {
           updated[`${row}-${col}`] = "";
         }
       } else {
+        // Set the value directly, don't add
         for (let row = 0; row < 10; row++) {
           const key = `${row}-${col}`;
-          updated[key] = String(
-            (parseInt(updated[key], 10) || 0) + parseInt(value, 10)
-          );
+          updated[key] = value;
         }
       }
       return updated;
