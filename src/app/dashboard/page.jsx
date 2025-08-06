@@ -167,91 +167,28 @@ export default function Page() {
   const [showAdvanceDrawModal, setShowAdvanceDrawModal] = useState(false);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
-  const [isPrinting, setIsPrinting] = useState(false);
 
   const [transactionInput, setTransactionInput] = useState("");
   const [activeFButtons, setActiveFButtons] = useState([]); // Example: ["10-19", "30-39"]
 
   const [allFColumnsSelected, setAllFColumnsSelected] = useState(false);
-  const [activeNumberBox, setActiveNumberBox] = useState({
-    row: null,
-    col: null,
+
+function selectAllInColumn(colIdx) {
+  setSelected((prev) => {
+    const updated = prev.map((rowArr) =>
+      rowArr.map((checked, cIdx) => (cIdx === colIdx ? true : checked))
+    );
+
+    // Update quantities and points based on new selection
+    const newQuantities = updated.map((row) => row.filter(Boolean).length);
+    const newPoints = newQuantities.map((q) => q * 2);
+
+    setQuantities(newQuantities);
+    setPoints(newPoints);
+
+    return updated;
   });
-
-  const [activeCheckbox, setActiveCheckbox] = useState(null);
-  const [checkboxInputs, setCheckboxInputs] = useState({});
-  const [activeColGroup, setActiveColGroup] = useState(null);
-
-  // Calculates row-wise quantity and points for all checked numbers (checkboxInputs)
-  const updatedQuantity = range(0, 9).map((row) => {
-    let total = 0;
-    for (let col = 0; col < 3; col++) {
-      if (selected[row][col]) {
-        const num = allNumbers[col][row]; // number like 53, 54, etc.
-        const inputs = checkboxInputs[num] || {};
-        // Sum all input values for this number
-        for (const key in inputs) {
-          const v = parseInt(inputs[key], 10);
-          if (!isNaN(v)) total += v;
-        }
-      }
-    }
-    return total;
-  });
-
-  // Amounts: Change formula if you want, right now just double of quantity
-  const updatedPoints = updatedQuantity.map((q) => q * 2);
-
-  function toggleNumberBox(row, col) {
-    setActiveNumberBox({ row, col });
-  }
-
-  // SAVE on every change
-  useEffect(() => {
-    localStorage.setItem("checkboxInputs", JSON.stringify(checkboxInputs));
-  }, [checkboxInputs]);
-
-  // LOAD on mount
-  useEffect(() => {
-    const savedInputs = localStorage.getItem("checkboxInputs");
-    if (savedInputs) {
-      setCheckboxInputs(JSON.parse(savedInputs));
-    }
-  }, []);
-
-  function selectByTypeFilter(type) {
-    // type: "all" | "odd" | "even"
-    setSelected((prev) => {
-      return prev.map((rowArr, row) =>
-        rowArr.map((_, col) => {
-          const num = allNumbers[col][row];
-          if (type === "all") return true;
-          if (type === "odd") return num % 2 === 1;
-          if (type === "even") return num % 2 === 0;
-          return false;
-        })
-      );
-    });
-    setActiveCheckbox(null);
-    setActiveColGroup(null);
-  }
-
-  function selectAllInColumn(colIdx) {
-    setSelected((prev) => {
-      const updated = prev.map((rowArr) =>
-        rowArr.map((checked, cIdx) => (cIdx === colIdx ? true : checked))
-      );
-
-      // Update quantities and points based on new selection
-      const newQuantities = updated.map((row) => row.filter(Boolean).length);
-      const newPoints = newQuantities.map((q) => q * 2);
-
-      setQuantities(newQuantities);
-      setPoints(newPoints);
-
-      return updated;
-    });
-  }
+}
 
   const handleClaimTicket = async () => {
     try {
@@ -297,9 +234,6 @@ export default function Page() {
         row.map((val, idx) => (idx === colIndex ? true : val))
       )
     );
-
-    setActiveColGroup(colKey);
-    setActiveCheckbox(null);
   }
 
   // Handlers:
@@ -376,12 +310,6 @@ export default function Page() {
     }
   }, [remainSecs]);
 
-  useEffect(() => {
-    const ticketList = getTicketList();
-    console.log("Selected Ticket Numbers:", ticketList);
-    localStorage.setItem("ticketList", JSON.stringify(ticketList)); // optional
-  }, [selected, checkboxInputs]);
-
   // update the slots every 5 seconds to keep checking
   useEffect(() => {
     const interval = setInterval(() => {
@@ -451,7 +379,7 @@ export default function Page() {
       }
       if (e.key === "F6") {
         e.preventDefault();
-        if (!isPrinting) handlePrint();
+        handlePrint();
       }
     }
 
@@ -512,31 +440,17 @@ export default function Page() {
   }, [quantities, cellOverrides]);
 
   useEffect(() => {
-    // Instead of the filledCells + selectedNumbers approach,
-    // build tickets from checkboxInputs for each selected number
-
     let ticketList = [];
+
+    // 1. Get all selected numbers (from checkboxes)
     let selectedNumbers = [];
     for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
       for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
         if (selected[rowIdx][colIdx]) {
-          const num = allNumbers[colIdx][rowIdx];
-          selectedNumbers.push(num);
-
-          // If this number has any entered values (in checkboxInputs)
-          if (checkboxInputs[num]) {
-            Object.entries(checkboxInputs[num]).forEach(
-              ([cellIndex, value]) => {
-                if (value && value !== "0" && value !== "") {
-                  ticketList.push(`${num}-${cellIndex} : ${value}`);
-                }
-              }
-            );
-          }
+          selectedNumbers.push(allNumbers[colIdx][rowIdx]);
         }
       }
     }
-    console.log("Selected Ticket Numbers:", ticketList);
 
     // 2. Get all input cells with values
     let filledCells = [];
@@ -562,11 +476,7 @@ export default function Page() {
       });
     });
 
-    // Log to console
     console.log("Selected Ticket Numbers:", ticketList);
-
-    // Save to localStorage
-    localStorage.setItem("ticketList", JSON.stringify(ticketList));
   }, [selected, cellOverrides]);
 
   const handleGridChange = (row, col, value) => {
@@ -617,26 +527,6 @@ export default function Page() {
       });
     }
   };
-  function getTicketList() {
-    let ticketSet = new Set();
-    for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
-      for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
-        if (selected[rowIdx][colIdx]) {
-          const num = allNumbers[colIdx][rowIdx];
-          if (checkboxInputs[num]) {
-            Object.entries(checkboxInputs[num]).forEach(
-              ([cellIndex, value]) => {
-                if (value && value !== "0" && value !== "") {
-                  ticketSet.add(`${num}-${cellIndex} : ${value}`);
-                }
-              }
-            );
-          }
-        }
-      }
-    }
-    return Array.from(ticketSet);
-  }
 
   function getCellValue(row, col) {
     const num = row * 10 + col;
@@ -811,15 +701,9 @@ export default function Page() {
 
     // Open in new window for printing
     const printWindow = window.open(pdfUrl);
-    if (printWindow) {
-      printWindow.onload = function () {
-        printWindow.print();
-      };
-    } else {
-      alert(
-        "Unable to open print window. Please disable popup blocker and try again."
-      );
-    }
+    printWindow.onload = function () {
+      printWindow.print();
+    };
 
     // Alternative: Save as file
     // pdf.save(`receipt_${ticketId}.pdf`);
@@ -827,50 +711,75 @@ export default function Page() {
 
   // to print and save the data
   const handlePrint = async () => {
-    console.log("PRINT CLICKED");
-    if (isPrinting) return; // Don't allow double fire
-    setIsPrinting(true);
+    // Prevent print if not allowed (remainSecs ≤ 30 or totalUpdatedQuantity is 0)
+    if (remainSecs <= 30) {
+      alert("Print is disabled during the last 30 seconds before draw time!");
+      return;
+    }
+    if (totalUpdatedQuantity === 0) {
+      alert("No quantity selected or no tickets to print.");
+      return;
+    }
 
+    // 1. Gather ticket numbers in your required format
+    let ticketList = [];
+    let selectedNumbers = [];
+    for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
+      for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
+        if (selected[rowIdx][colIdx]) {
+          selectedNumbers.push(allNumbers[colIdx][rowIdx]);
+        }
+      }
+    }
+    let filledCells = [];
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < 10; col++) {
+        const key = `${row}-${col}`;
+        const value = cellOverrides[key];
+        if (value && value !== "") {
+          const cellNum = row * 10 + col;
+          filledCells.push({
+            cellIndex: String(cellNum).padStart(2, "0"),
+            value,
+          });
+        }
+      }
+    }
+    selectedNumbers.forEach((num) => {
+      filledCells.forEach((cell) => {
+        ticketList.push(`${num}-${cell.cellIndex} : ${cell.value}`);
+      });
+    });
+
+    // 2. Get loginId from JWT
+    const loginId = getLoginIdFromToken();
+    if (!loginId) {
+      alert("User not logged in.");
+      return;
+    }
+
+    // 3. Get current date and time (formatted)
+    const gameTime = getFormattedDateTime();
+
+    // 4. Prepare data payload
+    const payload = {
+      gameTime,
+      ticketNumber: ticketList.join(", "),
+      totalQuatity: totalUpdatedQuantity,
+      totalPoints: totalUpdatedPoints,
+      loginId,
+      drawTime:
+        advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+    };
+
+    // 5. Send data to backend
     try {
-      const ticketList = getTicketList();
-      if (remainSecs <= 30) {
-        alert("Print is disabled during the last 30 seconds before draw time!");
-        return;
-      }
-      if (totalUpdatedQuantity === 0) {
-        alert("No quantity selected or no tickets to print.");
-        return;
-      }
-
-      // Get loginId from JWT
-      const loginId = getLoginIdFromToken();
-      if (!loginId) {
-        alert("User not logged in.");
-        return;
-      }
-
-      // Get current date and time (formatted)
-      const gameTime = getFormattedDateTime();
-
-      // Prepare data payload
-      const payload = {
-        gameTime,
-        ticketNumber: ticketList.join(", "),
-        totalQuatity: totalUpdatedQuantity,
-        totalPoints: totalUpdatedPoints,
-        loginId,
-        drawTime:
-          advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
-      };
-
-      // Send data to backend
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
         payload
       );
-
       if (response.status === 201) {
-        // Get ticket ID from response
+        // Get ticket ID from response (adjust based on your backend response structure)
         const ticketId =
           response.data.ticketId || response.data.id || Date.now().toString();
 
@@ -897,9 +806,6 @@ export default function Page() {
         setCellOverrides({});
         setColumnHeaders(Array(10).fill(""));
         setRowHeaders(Array(10).fill(""));
-        setCheckboxInputs({});
-        localStorage.removeItem("checkboxInputs");
-        setAdvanceDrawTimes([]);
       } else {
         alert(
           "Failed to save tickets: " +
@@ -911,10 +817,9 @@ export default function Page() {
         "Error saving tickets: " +
           (error?.response?.data?.message || error.message)
       );
-    } finally {
-      setIsPrinting(false); // Reset the printing state
     }
   };
+
   // Calculate total value (sum of all input boxes)
   let totalValue = 0;
   Object.values(cellOverrides).forEach((v) => {
@@ -923,9 +828,9 @@ export default function Page() {
   });
 
   // Calculate updatedQuantity array
-  // const updatedQuantity = quantities.map((q) => totalValue * q);
+  const updatedQuantity = quantities.map((q) => totalValue * q);
 
-  // const updatedPoints = updatedQuantity.map((q) => q * 2);
+  const updatedPoints = updatedQuantity.map((q) => q * 2);
 
   const totalUpdatedQuantity = updatedQuantity.reduce(
     (sum, val) => sum + val,
@@ -958,17 +863,7 @@ export default function Page() {
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-4 justify-center ">
           <button
-            onClick={() => {
-              if (activeTypeFilter === "all") {
-                setActiveTypeFilter(null);
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              } else {
-                setActiveTypeFilter("all");
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              }
-            }}
+            onClick={() => handleOddEvenFP("all")}
             className={`px-4 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
               activeTypeFilter === "all"
                 ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
@@ -978,17 +873,7 @@ export default function Page() {
             All
           </button>
           <button
-            onClick={() => {
-              if (activeTypeFilter === "even") {
-                setActiveTypeFilter(null);
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              } else {
-                setActiveTypeFilter("even");
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              }
-            }}
+            onClick={() => handleOddEvenFP("even")}
             className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
               activeTypeFilter === "even"
                 ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
@@ -998,17 +883,7 @@ export default function Page() {
             Even
           </button>
           <button
-            onClick={() => {
-              if (activeTypeFilter === "odd") {
-                setActiveTypeFilter(null);
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              } else {
-                setActiveTypeFilter("odd");
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              }
-            }}
+            onClick={() => handleOddEvenFP("odd")}
             className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
               activeTypeFilter === "odd"
                 ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
@@ -1017,7 +892,6 @@ export default function Page() {
           >
             Odd
           </button>
-
           <button
             onClick={() => {
               setIsFPMode((fp) => !fp);
@@ -1111,32 +985,13 @@ export default function Page() {
                       margin: "0",
                       boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
                     }}
+                    onClick={() => toggle(row, colIdx)}
                   >
                     {/* Custom Checkbox */}
                     <input
                       type="checkbox"
                       checked={selected[row][colIdx]}
-                      onChange={() => {
-                        const checkboxNum = allNumbers[colIdx][row];
-                        const isChecked = selected[row][colIdx];
-
-                        toggle(row, colIdx);
-
-                        if (!isChecked) {
-                          // If we are checking (ticking) the box
-                          setActiveCheckbox(checkboxNum);
-                        } else {
-                          // If we are unchecking, remove values for this number
-                          setCheckboxInputs((prev) => {
-                            const updated = { ...prev };
-                            delete updated[checkboxNum];
-                            return updated;
-                          });
-                          if (activeCheckbox === checkboxNum) {
-                            setActiveCheckbox(null);
-                          }
-                        }
-                      }}
+                      onChange={() => toggle(row, colIdx)}
                       className="peer appearance-none w-6 h-6 rounded bg-white border-2 border-[#4A314D] checked:bg-gradient-to-r checked:from-purple-600 checked:to-pink-600 checked:border-purple-600 flex-shrink-0 transition-all duration-200 hover:scale-110"
                       style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
                     />
@@ -1152,20 +1007,7 @@ export default function Page() {
                     </span>
                     {/* Enhanced Number Box */}
                     <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleNumberBox(row, colIdx);
-                        setActiveCheckbox(num);
-                        setActiveColGroup(null);
-                      }}
-                      className={`w-10 h-7 flex items-center justify-center font-bold text-md border-2 border-[#4A314D] rounded select-none transition-all duration-200 cursor-pointer
-                      ${
-                        activeNumberBox.row === row &&
-                        activeNumberBox.col === colIdx
-                          ? "bg-purple-700 text-white"
-                          : "bg-white text-[#4A314D]"
-                      }
-                    `}
+                      className="w-10 h-7 flex items-center justify-center font-bold text-md text-[#4A314D] bg-white border-2 border-[#4A314D] rounded select-none transition-all duration-200 hover:bg-gray-50"
                       style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
                     >
                       {num}
@@ -1179,23 +1021,18 @@ export default function Page() {
           {/* Enhanced Action Buttons */}
           <div className="flex gap-3 mt-6">
             <button
-              type="button"
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
                 !canPrint ? "opacity-50 cursor-not-allowed" : ""
               }`}
               onClick={handlePrint}
-              disabled={!canPrint || isPrinting}
+              disabled={!canPrint}
             >
               <Printer className="w-5 h-5" />
               Print
             </button>
 
             <button
-              onClick={() => {
-                window.location.reload();
-                setCheckboxInputs({});
-                localStorage.removeItem("checkboxInputs");
-              }}
+              onClick={() => window.location.reload()}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95"
             >
               <RotateCcw className="w-5 h-5" />
@@ -1305,67 +1142,52 @@ export default function Page() {
     }
   `}
                           maxLength={3}
-                          value={
-                            activeCheckbox && checkboxInputs[activeCheckbox]
-                              ? checkboxInputs[activeCheckbox][
-                                  `${row * 10 + col}`
-                                ] || ""
-                              : activeColGroup
-                              ? (() => {
-                                  let colIdx;
-                                  if (activeColGroup === "10-19") colIdx = 0;
-                                  else if (activeColGroup === "30-39")
-                                    colIdx = 1;
-                                  else if (activeColGroup === "50-59")
-                                    colIdx = 2;
-                                  const num = allNumbers[colIdx][row];
-                                  return (
-                                    (checkboxInputs[num] &&
-                                      checkboxInputs[num][
-                                        `${row * 10 + col}`
-                                      ]) ||
-                                    ""
-                                  );
-                                })()
-                              : ""
-                          }
+                          value={getCellValue(row, col)}
                           onChange={(e) => {
                             const input = e.target.value;
+
+                            // Allow only numbers between 000 and 999
                             if (!/^\d{0,3}$/.test(input)) return;
-                            if (parseInt(input, 10) > 999) return;
-                            const inputIndex = `${row * 10 + col}`;
+                            const numeric = parseInt(input, 10);
+                            if (numeric > 999) return;
 
-                            if (activeColGroup) {
-                              // Find the numbers in the active column group
-                              let colIdx;
-                              if (activeColGroup === "10-19") colIdx = 0;
-                              else if (activeColGroup === "30-39") colIdx = 1;
-                              else if (activeColGroup === "50-59") colIdx = 2;
-                              const nums = allNumbers[colIdx];
+                            const num = row * 10 + col;
+                            const numStr = String(num).padStart(2, "0");
 
-                              // Update that inputIndex for every number in this column group
-                              setCheckboxInputs((prev) => {
-                                const updated = { ...prev };
-                                nums.forEach((num) => {
-                                  updated[num] = {
-                                    ...(updated[num] || {}),
-                                    [inputIndex]: input,
-                                  };
-                                });
-                                return updated;
-                              });
-                            } else if (activeCheckbox) {
-                              // Solo checkbox logic
-                              setCheckboxInputs((prev) => ({
-                                ...prev,
-                                [activeCheckbox]: {
-                                  ...(prev[activeCheckbox] || {}),
-                                  [inputIndex]: input,
-                                },
-                              }));
+                            // Block based on active filter (odd, even, FP)
+                            if (
+                              (activeTypeFilter === "even" && num % 2 !== 0) ||
+                              (activeTypeFilter === "odd" && num % 2 === 0) ||
+                              (activeTypeFilter === "fp" &&
+                                !FP_SETS.flat().includes(numStr))
+                            ) {
+                              return;
+                            }
+
+                            handleGridChange(row, col, input);
+                          }}
+                          readOnly={
+                            (activeTypeFilter === "even" &&
+                              (row * 10 + col) % 2 !== 0) ||
+                            (activeTypeFilter === "odd" &&
+                              (row * 10 + col) % 2 === 0) ||
+                            (activeTypeFilter === "fp" &&
+                              !FP_SETS.flat().includes(
+                                String(row * 10 + col).padStart(2, "0")
+                              ))
+                          }
+                          onClick={() => {
+                            if (isFPMode) {
+                              const numStr = String(row * 10 + col).padStart(
+                                2,
+                                "0"
+                              );
+                              const setIdx = getFPSetIndexForNumber(numStr);
+                              setActiveFPSetIndex(
+                                setIdx !== -1 ? setIdx : null
+                              );
                             }
                           }}
-                          disabled={!activeCheckbox && !activeColGroup}
                         />
                       </td>
                     ))}
