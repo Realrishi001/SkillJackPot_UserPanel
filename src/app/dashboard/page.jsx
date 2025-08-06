@@ -137,7 +137,7 @@ export default function Page() {
   );
   const [activeFilter, setActiveFilter] = useState(null);
 
-  const [activeTypeFilter, setActiveTypeFilter] = useState(null); // 'all', 'odd', 'even', 'fp', or null
+  const [activeTypeFilter, setActiveTypeFilter] = useState("all"); // 'all', 'odd', 'even', 'fp', or null
   const [activeColFilter, setActiveColFilter] = useState(null); // '10-19', '30-39', '50-59', or null
 
   // Constant Quantity and Points for demo (change values as needed)
@@ -1002,6 +1002,16 @@ export default function Page() {
     return sum;
   }
 
+  const isOddIndex = (row, col) => (row * 10 + col) % 2 === 1;
+  const isEvenIndex = (row, col) => (row * 10 + col) % 2 === 0;
+
+
+  useEffect(() => {
+  console.log("activeTypeFilter:", activeTypeFilter);
+  console.log("activeCheckbox:", activeCheckbox, "activeColGroup:", activeColGroup);
+}, [activeTypeFilter, activeCheckbox, activeColGroup]);
+
+  
   const canPrint = remainSecs > 30 && totalUpdatedQuantity > 0;
 
   return (
@@ -1344,143 +1354,139 @@ export default function Page() {
                         <div className="text-[11px] text-white font-bold">
                           {String(row * 10 + col).padStart(2, "0")}
                         </div>
-                        <input
-                          type="text"
-                          data-index={String(row * 10 + col).padStart(2, "0")}
-                          className={`w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40 text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all duration-200 hover:border-purple-400
+                      <input
+  type="text"
+  data-index={String(row * 10 + col).padStart(2, "0")}
+  className={`
+    w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40
+    text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2
+    focus:ring-pink-500/20 outline-none transition-all duration-200
+    hover:border-purple-400
     ${
       isFPMode &&
       activeFPSetIndex !== null &&
-      FP_SETS[activeFPSetIndex].includes(
-        String(row * 10 + col).padStart(2, "0")
-      )
+      FP_SETS[activeFPSetIndex].includes(String(row * 10 + col).padStart(2, "0"))
         ? "fp-highlight"
         : ""
     }
+    ${
+      (
+        isFPMode
+          ? false
+          : activeTypeFilter === "odd"
+            ? !isOddIndex(row, col)
+            : activeTypeFilter === "even"
+              ? !isEvenIndex(row, col)
+              : activeTypeFilter === "all"
+                ? false
+                : (!activeCheckbox && !activeColGroup)
+      )
+        ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-70"
+        : ""
+    }
   `}
-                          maxLength={3}
-                          value={
-                            // First check cellOverrides (from row/column headers or FP mode)
-                            cellOverrides[`${row}-${col}`] !== undefined &&
-                            cellOverrides[`${row}-${col}`] !== ""
-                              ? cellOverrides[`${row}-${col}`]
-                              : // Then your existing checkbox logic
-                              activeCheckbox && checkboxInputs[activeCheckbox]
-                              ? checkboxInputs[activeCheckbox][
-                                  `${row * 10 + col}`
-                                ] || ""
-                              : activeColGroup
-                              ? (() => {
-                                  let colIdx;
-                                  if (activeColGroup === "10-19") colIdx = 0;
-                                  else if (activeColGroup === "30-39")
-                                    colIdx = 1;
-                                  else if (activeColGroup === "50-59")
-                                    colIdx = 2;
-                                  const num = allNumbers[colIdx][row];
-                                  return (
-                                    (checkboxInputs[num] &&
-                                      checkboxInputs[num][
-                                        `${row * 10 + col}`
-                                      ]) ||
-                                    ""
-                                  );
-                                })()
-                              : ""
-                          }
-                          onClick={(e) => {
-                            if (isFPMode) {
-                              const numStr = String(row * 10 + col).padStart(
-                                2,
-                                "0"
-                              );
-                              const setIdx = getFPSetIndexForNumber(numStr);
+  maxLength={3}
+  value={
+    cellOverrides[`${row}-${col}`] !== undefined && cellOverrides[`${row}-${col}`] !== ""
+      ? cellOverrides[`${row}-${col}`]
+      : activeCheckbox && checkboxInputs[activeCheckbox]
+        ? checkboxInputs[activeCheckbox][`${row * 10 + col}`] || ""
+        : activeColGroup
+          ? (() => {
+              let colIdx;
+              if (activeColGroup === "10-19") colIdx = 0;
+              else if (activeColGroup === "30-39") colIdx = 1;
+              else if (activeColGroup === "50-59") colIdx = 2;
+              const num = allNumbers[colIdx][row];
+              return (
+                (checkboxInputs[num] && checkboxInputs[num][`${row * 10 + col}`]) ||
+                ""
+              );
+            })()
+          : ""
+  }
+  onClick={(e) => {
+    if (isFPMode) {
+      const numStr = String(row * 10 + col).padStart(2, "0");
+      const setIdx = getFPSetIndexForNumber(numStr);
 
-                              if (setIdx !== -1) {
-                                // If this cell belongs to an FP set
-                                setActiveFPSetIndex(setIdx);
-                                highlightFPSet(setIdx);
-                              } else {
-                                // If clicked cell is not in any FP set
-                                setActiveFPSetIndex(null);
-                                clearFPHighlights();
-                              }
-                            }
-                          }}
-                          onChange={(e) => {
-                            const input = e.target.value;
-                            if (!/^\d{0,3}$/.test(input)) return;
-                            if (parseInt(input, 10) > 999) return;
-                            const inputIndex = `${row * 10 + col}`;
-                            const numStr = String(row * 10 + col).padStart(
-                              2,
-                              "0"
-                            );
+      if (setIdx !== -1) {
+        setActiveFPSetIndex(setIdx);
+        highlightFPSet(setIdx);
+      } else {
+        setActiveFPSetIndex(null);
+        clearFPHighlights();
+      }
+    }
+  }}
+  onChange={(e) => {
+    const input = e.target.value;
+    if (!/^\d{0,3}$/.test(input)) return;
+    if (parseInt(input, 10) > 999) return;
+    const inputIndex = `${row * 10 + col}`;
+    const numStr = String(row * 10 + col).padStart(2, "0");
 
-                            // If in FP mode and this cell is part of the active FP set
-                            if (
-                              isFPMode &&
-                              activeFPSetIndex !== null &&
-                              FP_SETS[activeFPSetIndex].includes(numStr)
-                            ) {
-                              // Update all cells in the active FP set
-                              FP_SETS[activeFPSetIndex].forEach((setNum) => {
-                                // Find the input element and update its value
-                                const element = document.querySelector(
-                                  `[data-index="${setNum}"]`
-                                );
-                                if (element) {
-                                  element.value = input;
-                                }
+    if (
+      isFPMode &&
+      activeFPSetIndex !== null &&
+      FP_SETS[activeFPSetIndex].includes(numStr)
+    ) {
+      FP_SETS[activeFPSetIndex].forEach((setNum) => {
+        const element = document.querySelector(`[data-index="${setNum}"]`);
+        if (element) {
+          element.value = input;
+        }
+        const r = Math.floor(parseInt(setNum) / 10);
+        const c = parseInt(setNum) % 10;
+        setCellOverrides((prev) => ({
+          ...prev,
+          [`${r}-${c}`]: input,
+        }));
+      });
+    } else if (activeColGroup) {
+      let colIdx;
+      if (activeColGroup === "10-19") colIdx = 0;
+      else if (activeColGroup === "30-39") colIdx = 1;
+      else if (activeColGroup === "50-59") colIdx = 2;
+      const nums = allNumbers[colIdx];
+      setCheckboxInputs((prev) => {
+        const updated = { ...prev };
+        nums.forEach((num) => {
+          updated[num] = {
+            ...(updated[num] || {}),
+            [inputIndex]: input,
+          };
+        });
+        return updated;
+      });
+    } else if (activeCheckbox) {
+      setCheckboxInputs((prev) => ({
+        ...prev,
+        [activeCheckbox]: {
+          ...(prev[activeCheckbox] || {}),
+          [inputIndex]: input,
+        },
+      }));
+    } else {
+      setCellOverrides((prev) => ({
+        ...prev,
+        [`${row}-${col}`]: input,
+      }));
+    }
+  }}
+  disabled={
+    isFPMode
+      ? false
+      : activeTypeFilter === "odd"
+        ? !isOddIndex(row, col)
+        : activeTypeFilter === "even"
+          ? !isEvenIndex(row, col)
+          : activeTypeFilter === "all"
+            ? false
+            : (!activeCheckbox && !activeColGroup)
+  }
+/>
 
-                                // Also update your state/cellOverrides
-                                const r = Math.floor(parseInt(setNum) / 10);
-                                const c = parseInt(setNum) % 10;
-                                setCellOverrides((prev) => ({
-                                  ...prev,
-                                  [`${r}-${c}`]: input,
-                                }));
-                              });
-                            } else if (activeColGroup) {
-                              // Your existing column group logic
-                              let colIdx;
-                              if (activeColGroup === "10-19") colIdx = 0;
-                              else if (activeColGroup === "30-39") colIdx = 1;
-                              else if (activeColGroup === "50-59") colIdx = 2;
-                              const nums = allNumbers[colIdx];
-
-                              // Update that inputIndex for every number in this column group
-                              setCheckboxInputs((prev) => {
-                                const updated = { ...prev };
-                                nums.forEach((num) => {
-                                  updated[num] = {
-                                    ...(updated[num] || {}),
-                                    [inputIndex]: input,
-                                  };
-                                });
-                                return updated;
-                              });
-                            } else if (activeCheckbox) {
-                              // Solo checkbox logic
-                              setCheckboxInputs((prev) => ({
-                                ...prev,
-                                [activeCheckbox]: {
-                                  ...(prev[activeCheckbox] || {}),
-                                  [inputIndex]: input,
-                                },
-                              }));
-                            } else {
-                              // If no special mode is active, just update cellOverrides directly
-                              setCellOverrides((prev) => ({
-                                ...prev,
-                                [`${row}-${col}`]: input,
-                              }));
-                            }
-                          }}
-                          disabled={
-                            !activeCheckbox && !activeColGroup && !isFPMode
-                          }
-                        />
                       </td>
                     ))}
                     <td className="bg-transparent"></td>
