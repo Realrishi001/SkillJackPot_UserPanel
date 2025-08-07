@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -357,71 +358,70 @@ export default function Page() {
 
   // Handlers:
   // Update your handleColumnHeaderChange function:
-const handleColumnHeaderChange = (col, value) => {
-  if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
+  const handleColumnHeaderChange = (col, value) => {
+    // Allow numbers from 0 to 999
+    if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
 
-  setColumnHeaders((headers) =>
-    headers.map((v, i) => (i === col ? value : v))
-  );
+    setColumnHeaders((headers) =>
+      headers.map((v, i) => (i === col ? value : v))
+    );
 
-  setCellOverrides((overrides) => {
-    const updated = { ...overrides };
-    const colVal = parseInt(value || "0", 10);
+    setCellOverrides((overrides) => {
+      const updated = { ...overrides };
 
-    for (let row = 0; row < 10; row++) {
-      const key = `${row}-${col}`;
-      const manualVal = parseInt(overrides[key], 10);
-      const rowVal = parseInt(rowHeaders[row] || "0", 10);
+      for (let row = 0; row < 10; row++) {
+        const key = `${row}-${col}`;
 
-      // If manual or checkbox value exists, add to it
-      const baseVal = isNaN(manualVal) ? 0 : manualVal;
+        const rowVal = parseInt(rowHeaders[row] || "0", 10);
+        const colVal = parseInt(value || "0", 10);
 
-      // Skip if value is being cleared
-      if (value === "") {
-        delete updated[key];
-      } else {
-        const finalVal = baseVal + colVal;
-        updated[key] = finalVal.toString();
+        if (value === "") {
+          delete updated[key];
+        } else {
+          // ✅ NEW: Force overwrite in every case (your final ask)
+          if (rowHeaders[row] && rowHeaders[row] !== "") {
+            updated[key] = (rowVal + colVal).toString();
+          } else {
+            updated[key] = value;
+          }
+        }
       }
-    }
 
-    return updated;
-  });
-};
-
-
-
+      return updated;
+    });
+  };
 
   // Update your handleRowHeaderChange function:
-const handleRowHeaderChange = (row, value) => {
-  if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
+  const handleRowHeaderChange = (row, value) => {
+    // Allow numbers from 0 to 999
+    if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
 
-  setRowHeaders((headers) => headers.map((v, i) => (i === row ? value : v)));
+    setRowHeaders((headers) => headers.map((v, i) => (i === row ? value : v)));
 
-  setCellOverrides((overrides) => {
-    const updated = { ...overrides };
-    const rowVal = parseInt(value || "0", 10);
+    setCellOverrides((overrides) => {
+      const updated = { ...overrides };
 
-    for (let col = 0; col < 10; col++) {
-      const key = `${row}-${col}`;
-      const manualVal = parseInt(overrides[key], 10);
-      const colVal = parseInt(columnHeaders[col] || "0", 10);
+      for (let col = 0; col < 10; col++) {
+        const key = `${row}-${col}`;
 
-      const baseVal = isNaN(manualVal) ? 0 : manualVal;
+        const rowVal = parseInt(value || "0", 10);
+        const colVal = parseInt(columnHeaders[col] || "0", 10);
 
-      if (value === "") {
-        delete updated[key];
-      } else {
-        const finalVal = baseVal + rowVal;
-        updated[key] = finalVal.toString();
+        if (value === "") {
+          delete updated[key];
+        } else {
+          // ✅ NEW: Force overwrite in every case
+          if (columnHeaders[col] && columnHeaders[col] !== "") {
+            updated[key] = (rowVal + colVal).toString();
+          } else {
+            updated[key] = value;
+          }
+        }
       }
-    }
 
-    return updated;
-  });
-};
-
-
+      return updated;
+    });
+  };
 
   // --- Timer logic ---
   const [remainSecs, setRemainSecs] = useState(() => getRemainTime());
@@ -875,10 +875,7 @@ const handleRowHeaderChange = (row, value) => {
 
     // Ticket Numbers in grid format
     let yPos = 50;
-    const ticketArray = data.ticketNumber
-  .split(", ")
-  .filter((ticket) => !ticket.includes("__cleared__"));
-
+    const ticketArray = data.ticketNumber.split(", ");
 
     // Group tickets by row (3 per row as shown in image)
     for (let i = 0; i < ticketArray.length; i += 3) {
@@ -1647,4 +1644,4 @@ const handleRowHeaderChange = (row, value) => {
       </div>
     </div>
   );
-}
+} 
