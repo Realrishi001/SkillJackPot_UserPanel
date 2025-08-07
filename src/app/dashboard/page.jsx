@@ -682,15 +682,48 @@ const handleColumnHeaderChange = (col, value) => {
     return Array.from(ticketSet);
   }
 function getCellValue(row, col) {
+  const key = `${row}-${col}`;
+  const cellIndex = row * 10 + col;
+  
+  // 1. Check cellOverrides first (highest priority)
+  if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
+    return cellOverrides[key];
+  }
+  
+  // 2. Check checkboxInputs for active checkbox
+  if (activeCheckbox && checkboxInputs[activeCheckbox]) {
+    const value = checkboxInputs[activeCheckbox][cellIndex];
+    if (value !== undefined && value !== "") {
+      return value;
+    }
+  }
+  
+  // 3. Check checkboxInputs for any selected number in active column group
+  if (activeColGroup) {
+    let colIdx;
+    if (activeColGroup === "10-19") colIdx = 0;
+    else if (activeColGroup === "30-39") colIdx = 1;
+    else if (activeColGroup === "50-59") colIdx = 2;
+    
+    if (colIdx !== undefined) {
+      const nums = allNumbers[colIdx];
+      for (let num of nums) {
+        if (checkboxInputs[num] && checkboxInputs[num][cellIndex]) {
+          return checkboxInputs[num][cellIndex];
+        }
+      }
+    }
+  }
+  
+  // 4. Check header sum logic
   const rowValue = parseInt(rowHeaders[row] || "0", 10);
   const colValue = parseInt(columnHeaders[col] || "0", 10);
-  // Only add if both headers are set
   if (rowHeaders[row] && columnHeaders[col]) {
     return rowValue + colValue;
   }
-  // Otherwise, show whichever is set (or blank)
   if (rowHeaders[row]) return rowValue;
   if (columnHeaders[col]) return colValue;
+  
   return "";
 }
 
