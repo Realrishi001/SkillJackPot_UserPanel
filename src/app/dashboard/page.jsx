@@ -185,40 +185,47 @@ export default function Page() {
   const [activeColGroup, setActiveColGroup] = useState(null);
 
   // Calculates row-wise quantity and points for all checked numbers (checkboxInputs)
-  const updatedQuantity = range(0, 9).map((row) => {
-    let total = 0;
+const updatedQuantity = range(0, 9).map((row) => {
+  let total = 0;
 
-    // For each selected checkbox in this row
-    for (let col = 0; col < 3; col++) {
-      if (selected[row][col]) {
-        const num = allNumbers[col][row]; // e.g., 10, 30, 50 for row 0
+  for (let col = 0; col < 3; col++) {
+    if (selected[row][col]) {
+      const num = allNumbers[col][row];
 
-        // Sum all input values for this selected number
-        for (let gridCol = 0; gridCol < 10; gridCol++) {
-          for (let gridRow = 0; gridRow < 10; gridRow++) {
-            const cellIndex = gridRow * 10 + gridCol;
-            const key = `${gridRow}-${gridCol}`;
+      for (let gridCol = 0; gridCol < 10; gridCol++) {
+        for (let gridRow = 0; gridRow < 10; gridRow++) {
+          const cellIndex = gridRow * 10 + gridCol;
+          const key = `${gridRow}-${gridCol}`;
+          let cellValue = "";
 
-            let cellValue = "";
-
-            // Priority: cellOverrides > checkboxInputs
-            if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
-              cellValue = cellOverrides[key];
-            } else if (checkboxInputs[num] && checkboxInputs[num][cellIndex]) {
-              cellValue = checkboxInputs[num][cellIndex];
+          if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
+            cellValue = cellOverrides[key];
+          } else if (checkboxInputs[num] && checkboxInputs[num][cellIndex]) {
+            cellValue = checkboxInputs[num][cellIndex];
+          } else {
+            const rowVal = parseInt(rowHeaders[gridRow] || "0", 10);
+            const colVal = parseInt(columnHeaders[gridCol] || "0", 10);
+            if (rowHeaders[gridRow] && columnHeaders[gridCol]) {
+              cellValue = (rowVal + colVal).toString();
+            } else if (rowHeaders[gridRow]) {
+              cellValue = rowVal.toString();
+            } else if (columnHeaders[gridCol]) {
+              cellValue = colVal.toString();
             }
+          }
 
-            const numValue = parseInt(cellValue, 10);
-            if (!isNaN(numValue) && numValue > 0) {
-              total += numValue;
-            }
+          const numValue = parseInt(cellValue, 10);
+          if (!isNaN(numValue) && numValue > 0) {
+            total += numValue;
           }
         }
       }
     }
+  }
 
-    return total;
-  });
+  return total;
+});
+
 
   // Amounts: Change formula if you want, right now just double of quantity
   const updatedPoints = updatedQuantity.map((q) => q * 2);
@@ -352,33 +359,77 @@ export default function Page() {
   }
 
   // Handlers:
-const handleRowHeaderChange = (row, value) => {
-  if (!/^-?\d*$/.test(value)) return;
-  setRowHeaders((headers) => headers.map((v, i) => (i === row ? value : v)));
+// Update your handleColumnHeaderChange function:
+const handleColumnHeaderChange = (col, value) => {
+  // Allow numbers from 0 to 999
+  if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
+
+  setColumnHeaders((headers) =>
+    headers.map((v, i) => (i === col ? value : v))
+  );
+
   setCellOverrides((overrides) => {
     const updated = { ...overrides };
-    for (let col = 0; col < 10; col++) {
-      if (!isCellDisabled(row, col)) {  // Only update if NOT disabled
-        updated[`${row}-${col}`] = value;
+
+    for (let row = 0; row < 10; row++) {
+      const key = `${row}-${col}`;
+
+      const rowVal = parseInt(rowHeaders[row] || "0", 10);
+      const colVal = parseInt(value || "0", 10);
+
+      if (value === "") {
+        delete updated[key];
+      } else {
+        // ✅ NEW: Force overwrite in every case (your final ask)
+        if (rowHeaders[row] && rowHeaders[row] !== "") {
+          updated[key] = (rowVal + colVal).toString();
+        } else {
+          updated[key] = value;
+        }
       }
     }
+
     return updated;
   });
 };
 
-const handleColumnHeaderChange = (col, value) => {
-  if (!/^-?\d*$/.test(value)) return;
-  setColumnHeaders((headers) => headers.map((v, i) => (i === col ? value : v)));
+
+// Update your handleRowHeaderChange function:
+const handleRowHeaderChange = (row, value) => {
+  // Allow numbers from 0 to 999
+  if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
+
+  setRowHeaders((headers) =>
+    headers.map((v, i) => (i === row ? value : v))
+  );
+
   setCellOverrides((overrides) => {
     const updated = { ...overrides };
-    for (let row = 0; row < 10; row++) {
-      if (!isCellDisabled(row, col)) {  // Only update if NOT disabled
-        updated[`${row}-${col}`] = value;
+
+    for (let col = 0; col < 10; col++) {
+      const key = `${row}-${col}`;
+
+      const rowVal = parseInt(value || "0", 10);
+      const colVal = parseInt(columnHeaders[col] || "0", 10);
+
+      if (value === "") {
+        delete updated[key];
+      } else {
+        // ✅ NEW: Force overwrite in every case
+        if (columnHeaders[col] && columnHeaders[col] !== "") {
+          updated[key] = (rowVal + colVal).toString();
+        } else {
+          updated[key] = value;
+        }
       }
     }
+
     return updated;
   });
 };
+
+
+
 
 
   // --- Timer logic ---
@@ -621,90 +672,96 @@ const handleColumnHeaderChange = (col, value) => {
         });
         return updated;
       });
+    }else {
+  setCellOverrides((prev) => {
+    const updated = { ...prev };
+    if (value === "") {
+      delete updated[`${row}-${col}`];
     } else {
-      setCellOverrides((overrides) => ({
-        ...overrides,
-        [`${row}-${col}`]: value,
-      }));
+      updated[`${row}-${col}`] = value;
+    }
+    return updated;
+  });
     }
   };
 
-  function getTicketList() {
-    let ticketSet = new Set();
+function getTicketList() {
+  const ticketSet = new Set();
+  const selectedNumbers = [];
 
-    // Get all selected numbers
-    let selectedNumbers = [];
-    for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
-      for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
-        if (selected[rowIdx][colIdx]) {
-          const num = allNumbers[colIdx][rowIdx];
-          selectedNumbers.push(num);
+  for (let colIdx = 0; colIdx < allNumbers.length; colIdx++) {
+    for (let rowIdx = 0; rowIdx < allNumbers[colIdx].length; rowIdx++) {
+      if (selected[rowIdx][colIdx]) {
+        const num = allNumbers[colIdx][rowIdx];
+        selectedNumbers.push(num);
 
-          // Check checkboxInputs for this number
-          if (checkboxInputs[num]) {
-            Object.entries(checkboxInputs[num]).forEach(
-              ([cellIndex, value]) => {
-                if (value && value !== "0" && value !== "") {
-                  ticketSet.add(
-                    `${num}-${cellIndex.padStart(2, "0")} : ${value}`
-                  );
-                }
-              }
-            );
-          }
-        }
-      }
-    }
-
-    // Now check cellOverrides (from row/column headers and FP mode)
-    let filledCells = [];
-    for (let row = 0; row < 10; row++) {
-      for (let col = 0; col < 10; col++) {
-        const key = `${row}-${col}`;
-        const value = cellOverrides[key];
-        if (value && value !== "" && value !== "0") {
-          const cellNum = row * 10 + col;
-          filledCells.push({
-            cellIndex: String(cellNum).padStart(2, "0"),
-            value,
+        // 1. CheckboxInputs (specific to this number)
+        if (checkboxInputs[num]) {
+          Object.entries(checkboxInputs[num]).forEach(([cellIndex, value]) => {
+            if (value && value !== "0" && value !== "") {
+              ticketSet.add(`${num}-${cellIndex.padStart(2, "0")} : ${value}`);
+            }
           });
         }
       }
     }
-
-    // For every selected number and every filled cell from cellOverrides, create tickets
-    selectedNumbers.forEach((num) => {
-      filledCells.forEach((cell) => {
-        ticketSet.add(`${num}-${cell.cellIndex} : ${cell.value}`);
-      });
-    });
-
-    return Array.from(ticketSet);
   }
+
+  // 2. Manual + Header overrides (for every selected number)
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 10; col++) {
+      const key = `${row}-${col}`;
+      const value = getCellValue(row, col);
+      const cellIndex = String(row * 10 + col).padStart(2, "0");
+
+      if (value && value !== "0" && value !== "") {
+        selectedNumbers.forEach((num) => {
+          ticketSet.add(`${num}-${cellIndex} : ${value}`);
+        });
+      }
+    }
+  }
+
+  return Array.from(ticketSet);
+}
+
+// Replace your getCellValue function with this corrected version:
 function getCellValue(row, col) {
   const key = `${row}-${col}`;
   const cellIndex = row * 10 + col;
-  
-  // 1. Check cellOverrides first (highest priority)
+
+  // Priority 1: Direct manual override (highest priority)
   if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
     return cellOverrides[key];
   }
+
+  // Priority 2: Row/Column header values (this should come BEFORE checkbox logic)
+  const rowVal = parseInt(rowHeaders[row] || "0", 10);
+  const colVal = parseInt(columnHeaders[col] || "0", 10);
   
-  // 2. Check checkboxInputs for active checkbox
+  if (rowHeaders[row] && rowHeaders[row] !== "" && columnHeaders[col] && columnHeaders[col] !== "") {
+    return (rowVal + colVal).toString();
+  } else if (columnHeaders[col] && columnHeaders[col] !== "") {
+    return columnHeaders[col];
+  } else if (rowHeaders[row] && rowHeaders[row] !== "") {
+    return rowHeaders[row];
+  }
+
+  // Priority 3: Active checkbox values
   if (activeCheckbox && checkboxInputs[activeCheckbox]) {
     const value = checkboxInputs[activeCheckbox][cellIndex];
     if (value !== undefined && value !== "") {
       return value;
     }
   }
-  
-  // 3. Check checkboxInputs for any selected number in active column group
+
+  // Priority 4: Active column group values
   if (activeColGroup) {
     let colIdx;
     if (activeColGroup === "10-19") colIdx = 0;
     else if (activeColGroup === "30-39") colIdx = 1;
     else if (activeColGroup === "50-59") colIdx = 2;
-    
+
     if (colIdx !== undefined) {
       const nums = allNumbers[colIdx];
       for (let num of nums) {
@@ -714,18 +771,10 @@ function getCellValue(row, col) {
       }
     }
   }
-  
-  // 4. Check header sum logic
-  const rowValue = parseInt(rowHeaders[row] || "0", 10);
-  const colValue = parseInt(columnHeaders[col] || "0", 10);
-  if (rowHeaders[row] && columnHeaders[col]) {
-    return rowValue + colValue;
-  }
-  if (rowHeaders[row]) return rowValue;
-  if (columnHeaders[col]) return colValue;
-  
+
   return "";
 }
+
 
   function getFPSetIndexForNumber(numStr) {
     return FP_SETS.findIndex((set) => set.includes(numStr));
@@ -1393,9 +1442,9 @@ function isCellDisabled(row, col) {
             ? !isOddIndex(row, col)
             : activeTypeFilter === "even"
               ? !isEvenIndex(row, col)
-              : activeTypeFilter === "all"
-                ? false
-                : (!activeCheckbox && !activeColGroup)
+              // : activeTypeFilter === "all"
+                : false
+                // : (!activeCheckbox && !activeColGroup)
       )
         ? "bg-gray-200 text-transparent cursor-not-allowed opacity-70"
         : ""
@@ -1417,61 +1466,73 @@ function isCellDisabled(row, col) {
       }
     }
   }}
-  onChange={(e) => {
-    const input = e.target.value;
-    if (!/^\d{0,3}$/.test(input)) return;
-    if (parseInt(input, 10) > 999) return;
-    const inputIndex = `${row * 10 + col}`;
-    const numStr = String(row * 10 + col).padStart(2, "0");
+ onChange={(e) => {
+  const input = e.target.value;
+  if (!/^\d{0,3}$/.test(input)) return;
+  if (parseInt(input, 10) > 999) return;
 
-    if (
-      isFPMode &&
-      activeFPSetIndex !== null &&
-      FP_SETS[activeFPSetIndex].includes(numStr)
-    ) {
-      FP_SETS[activeFPSetIndex].forEach((setNum) => {
-        const element = document.querySelector(`[data-index="${setNum}"]`);
-        if (element) {
-          element.value = input;
-        }
-        const r = Math.floor(parseInt(setNum) / 10);
-        const c = parseInt(setNum) % 10;
-        setCellOverrides((prev) => ({
-          ...prev,
-          [`${r}-${c}`]: input,
-        }));
-      });
-    } else if (activeColGroup) {
-      let colIdx;
-      if (activeColGroup === "10-19") colIdx = 0;
-      else if (activeColGroup === "30-39") colIdx = 1;
-      else if (activeColGroup === "50-59") colIdx = 2;
-      const nums = allNumbers[colIdx];
-      setCheckboxInputs((prev) => {
-        const updated = { ...prev };
-        nums.forEach((num) => {
-          updated[num] = {
-            ...(updated[num] || {}),
-            [inputIndex]: input,
-          };
-        });
-        return updated;
-      });
-    } else if (activeCheckbox) {
-      setCheckboxInputs((prev) => ({
-        ...prev,
-        [activeCheckbox]: {
-          ...(prev[activeCheckbox] || {}),
-          [inputIndex]: input,
-        },
-      }));
-    } else {
+  const inputIndex = `${row * 10 + col}`;
+  const numStr = String(row * 10 + col).padStart(2, "0");
+
+  // ✅ Backspace/Delete case — clear override and return early
+  if (input === "") {
+    setCellOverrides((prev) => {
+      const updated = { ...prev };
+      delete updated[`${row}-${col}`];
+      return updated;
+    });
+    return;
+  }
+
+  if (
+    isFPMode &&
+    activeFPSetIndex !== null &&
+    FP_SETS[activeFPSetIndex].includes(numStr)
+  ) {
+    FP_SETS[activeFPSetIndex].forEach((setNum) => {
+      const element = document.querySelector(`[data-index="${setNum}"]`);
+      if (element) {
+        element.value = input;
+      }
+      const r = Math.floor(parseInt(setNum) / 10);
+      const c = parseInt(setNum) % 10;
       setCellOverrides((prev) => ({
         ...prev,
-        [`${row}-${col}`]: input,
+        [`${r}-${c}`]: input,
       }));
-    }
-  }}
+    });
+  } else if (activeColGroup) {
+    let colIdx;
+    if (activeColGroup === "10-19") colIdx = 0;
+    else if (activeColGroup === "30-39") colIdx = 1;
+    else if (activeColGroup === "50-59") colIdx = 2;
+    const nums = allNumbers[colIdx];
+    setCheckboxInputs((prev) => {
+      const updated = { ...prev };
+      nums.forEach((num) => {
+        updated[num] = {
+          ...(updated[num] || {}),
+          [inputIndex]: input,
+        };
+      });
+      return updated;
+    });
+  } else if (activeCheckbox) {
+    setCheckboxInputs((prev) => ({
+      ...prev,
+      [activeCheckbox]: {
+        ...(prev[activeCheckbox] || {}),
+        [inputIndex]: input,
+      },
+    }));
+  } else {
+    setCellOverrides((prev) => ({
+      ...prev,
+      [`${row}-${col}`]: input,
+    }));
+  }
+}}
+
   disabled={
     isFPMode
       ? false
