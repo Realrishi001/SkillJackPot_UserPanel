@@ -69,20 +69,20 @@ const TABLE_CONFIG = {
   },
 };
 
-function getLoginIdFromToken() {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("userToken");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.id;
-      } catch (e) {
-        return null;
+  function getLoginIdFromToken() {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("userToken");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          return payload.id;
+        } catch (e) {
+          return null;
+        }
       }
     }
+    return null;
   }
-  return null;
-}
 
 const ShopAccounts = () => {
   const [activeTab, setActiveTab] = useState("points");

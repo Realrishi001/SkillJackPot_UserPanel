@@ -314,12 +314,11 @@ export default function ShowResult({ drawTime }) {
     }
   }, [gameId]);
 
-  // Winning Numbers
   useEffect(() => {
     axios
       .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
         drawTime: getBackendDrawTime(drawTime),
-        adminId: 4,
+        adminId: gameId,
       })
       .then((res) => {
         let tickets = [];
