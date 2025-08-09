@@ -238,17 +238,33 @@ function expandHeaderTickets(num, cols, rows) {
 
 
 function buildTicketsForNumber(num, cols, rows, checkboxMap) {
+  // base: headers (rows+cols; intersection summed)
   const tickets = { ...expandHeaderTickets(num, cols, rows) };
+
+  // add per-cell inputs ON TOP of headers
   if (checkboxMap) {
     Object.entries(checkboxMap).forEach(([cellIndex, v]) => {
       if (v !== "" && v !== "0" && v != null) {
         const idx = String(cellIndex).padStart(2, "0");
-        tickets[`${num}-${idx}`] = String(v);
+        const r = Math.floor(parseInt(cellIndex, 10) / 10);
+        const c = parseInt(cellIndex, 10) % 10;
+
+        const rv = rows[r];
+        const cv = cols[c];
+        const rNum = parseInt(rv || "0", 10);
+        const cNum = parseInt(cv || "0", 10);
+        const headerSum = (rv ? rNum : 0) + (cv ? cNum : 0);
+
+        const manual = parseInt(v || "0", 10);
+        const total = manual + headerSum;
+
+        tickets[`${num}-${idx}`] = String(total);
       }
     });
   }
   return tickets;
 }
+
 
 function persistActiveNumber(num) {
   if (!num) return;
@@ -274,18 +290,41 @@ function persistActiveNumber(num) {
 function loadNumberIntoUI(num) {
   const slot = ensureSlot(num);
 
-  // headers back into UI
-  setColumnHeaders(slot.columnHeader || Array(10).fill(""));
-  setRowHeaders(slot.rowHeader || Array(10).fill(""));
+  // 1) restore this number's headers into the inputs
+  const cols = slot.columnHeader || Array(10).fill("");
+  const rows = slot.rowHeader || Array(10).fill("");
+  setColumnHeaders(cols);
+  setRowHeaders(rows);
 
-  // per-cell values for this number → into checkboxInputs[num]
-  const nextMap = {};
-  Object.keys(slot.tickets || {}).forEach((k) => {
-    // k like "50-01" => take "01"
-    const idx = k.split("-")[1];
-    if (idx) nextMap[parseInt(idx, 10)] = String(slot.tickets[k]);
+  // 2) rebuild the per-cell "manual" map from tickets:
+  // manual = ticketTotal - (rowHeader + colHeader at that cell)
+  const manualMap = {};
+  Object.entries(slot.tickets || {}).forEach(([k, v]) => {
+    // k = "50-11" -> "11"
+    const idxStr = k.split("-")[1];
+    if (!idxStr) return;
+
+    const idx = parseInt(idxStr, 10);
+    if (Number.isNaN(idx)) return;
+
+    const r = Math.floor(idx / 10);
+    const c = idx % 10;
+
+    const rNum = parseInt(rows[r] || "0", 10);
+    const cNum = parseInt(cols[c] || "0", 10);
+    const headerSum =
+      (rows[r] ? rNum : 0) + (cols[c] ? cNum : 0);
+
+    const total = parseInt(String(v) || "0", 10);
+    const manual = total - headerSum;
+
+    if (!Number.isNaN(manual) && manual > 0) {
+      manualMap[idx] = String(manual);
+    }
   });
-  setCheckboxInputs(prev => ({ ...prev, [num]: nextMap }));
+
+  // 3) push manual map for this number (used by getCellValue)
+  setCheckboxInputs((prev) => ({ ...prev, [num]: manualMap }));
 }
 
   
@@ -522,50 +561,85 @@ const handleArrowNav = (e, kind, row, col) => {
     }
   };
 
+  function activateGroup(colKey) {
+  const colIndex = colKeyToIndex[colKey];
+
+  // if you were on a single number, save it before leaving
+  if (activeCheckbox) persistActiveNumber(activeCheckbox);
+
+  // only this column’s checkboxes should be selected
+  setSelected((prev) =>
+    prev.map((rowArr) => rowArr.map((_, idx) => idx === colIndex))
+  );
+
+  // mark only this group as active
+  setActiveFButtons([colKey]);
+  setActiveColGroup(colKey);
+  setActiveCheckbox(null);
+
+  // fresh UI (blank inputs) for group editing; existing saved data
+  // will still show via getCellValue if present
+  setCellOverrides({});
+  setColumnHeaders(Array(10).fill(""));
+  setRowHeaders(Array(10).fill(""));
+}
+
+
   const colKeyToIndex = { "10-19": 0, "30-39": 1, "50-59": 2 };
 
-  function handleColButton(colKey) {
-    const colIndex = colKeyToIndex[colKey];
+function handleColButton(colKey) {
+  const colIndex = colKeyToIndex[colKey];
 
-    // If already active, deselect this column only
-    if (activeFButtons.includes(colKey)) {
-      setActiveFButtons((prev) => prev.filter((k) => k !== colKey));
-      setSelected((prev) =>
-        prev.map((row) =>
-          row.map((val, idx) => (idx === colIndex ? false : val))
-        )
-      );
-      return;
-    }
+  // If we were editing a single number, save it before switching to a group
+  if (activeCheckbox) persistActiveNumber(activeCheckbox);
 
-    // Else: select this column + add to activeFButtons
-    setActiveFButtons((prev) => [...prev, colKey]);
-    setSelected((prev) =>
-      prev.map((row, rowIndex) =>
-        row.map((val, idx) => (idx === colIndex ? true : val))
-      )
-    );
-
-    setActiveColGroup(colKey);
+  // If this group is already the only active one → toggle it off
+  if (activeFButtons.length === 1 && activeFButtons[0] === colKey) {
+    setActiveFButtons([]);
+    setActiveColGroup(null);
     setActiveCheckbox(null);
+
+    // deselect all checkboxes in the grid
+    setSelected((prev) => prev.map((rowArr) => rowArr.map(() => false)));
+
+    // fresh/blank UI (existing saved data will still appear when you select again)
+    setCellOverrides({});
+    setColumnHeaders(Array(10).fill(""));
+    setRowHeaders(Array(10).fill(""));
+    return;
   }
 
+  // Otherwise: activate this group exclusively
+  setActiveFButtons([colKey]);
+  setSelected((prev) =>
+    prev.map((rowArr) => rowArr.map((_, idx) => idx === colIndex))
+  );
+
+  setActiveColGroup(colKey);
+  setActiveCheckbox(null);
+
+  // fresh/blank UI for this group session
+  setCellOverrides({});
+  setColumnHeaders(Array(10).fill(""));
+  setRowHeaders(Array(10).fill(""));
+}
+
   // Handlers:
+// COLUMN HEADER: set/clear and persist + purge column overrides
 const handleColumnHeaderChange = (col, value) => {
-  // 0–999 only
   if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
 
   setColumnHeaders((headers) => {
     const nextCols = headers.map((v, i) => (i === col ? value : v));
 
-    // if a number is active, persist headers->tickets (with sums at intersections)
+    // Persist when a single number is active
     if (activeCheckbox) {
       setStoreByNum((prev) => {
         const slot = ensureSlot(activeCheckbox);
         const mergedTickets = buildTicketsForNumber(
           activeCheckbox,
-          nextCols,                        // updated columns
-          rowHeaders,                      // current rows
+          nextCols,
+          slot.rowHeader ?? Array(10).fill(""),
           checkboxInputs[activeCheckbox] || {}
         );
         return {
@@ -573,53 +647,128 @@ const handleColumnHeaderChange = (col, value) => {
           [activeCheckbox]: {
             ...slot,
             columnHeader: nextCols,
-            rowHeader: slot.rowHeader ?? Array(10).fill(""),
-            tickets: mergedTickets
-          }
+            tickets: mergedTickets,
+          },
         };
       });
     }
 
+    // Persist when a column group is active (F7/F8/F9 or left buttons)
+    if (activeColGroup) {
+      let colIdx;
+      if (activeColGroup === "10-19") colIdx = 0;
+      else if (activeColGroup === "30-39") colIdx = 1;
+      else if (activeColGroup === "50-59") colIdx = 2;
+
+      if (colIdx !== undefined) {
+        const nums = allNumbers[colIdx];
+        setStoreByNum((prev) => {
+          const next = { ...prev };
+          nums.forEach((n) => {
+            const slot = ensureSlot(n);
+            const mergedTickets = buildTicketsForNumber(
+              n,
+              nextCols,                                 // new column headers
+              slot.rowHeader ?? Array(10).fill(""),     // keep row headers per number
+              checkboxInputs[n] || {}                   // keep per-cell edits
+            );
+            next[n] = {
+              ...slot,
+              columnHeader: nextCols,
+              tickets: mergedTickets,
+            };
+          });
+          return next;
+        });
+      }
+    }
+
     return nextCols;
+  });
+
+  // IMPORTANT: never store header fills in overrides.
+  // Purge all overrides for this column so header fallback shows correctly.
+  setCellOverrides((overrides) => {
+    const updated = { ...overrides };
+    for (let r = 0; r < 10; r++) delete updated[`${r}-${col}`];
+    return updated;
   });
 };
 
 
 
-
   // Update your handleRowHeaderChange function:
+// ROW HEADER: set/clear and persist + purge row overrides
 const handleRowHeaderChange = (row, value) => {
-  // 0–999 only
+  // allow 0–999
   if (!/^\d{0,3}$/.test(value) || parseInt(value || "0", 10) > 999) return;
 
   setRowHeaders((headers) => {
     const nextRows = headers.map((v, i) => (i === row ? value : v));
 
-    // if a number is active, persist headers->tickets (with sums at intersections)
+    // Persist when a single number is active
     if (activeCheckbox) {
       setStoreByNum((prev) => {
         const slot = ensureSlot(activeCheckbox);
         const mergedTickets = buildTicketsForNumber(
           activeCheckbox,
-          columnHeaders,                   // current columns
-          nextRows,                        // updated rows
+          slot.columnHeader ?? Array(10).fill(""),
+          nextRows,
           checkboxInputs[activeCheckbox] || {}
         );
         return {
           ...prev,
           [activeCheckbox]: {
             ...slot,
-            columnHeader: slot.columnHeader ?? Array(10).fill(""),
             rowHeader: nextRows,
-            tickets: mergedTickets
-          }
+            tickets: mergedTickets,
+          },
         };
       });
     }
 
+    // Persist when a column group is active (apply row headers to all nums in that group)
+    if (activeColGroup) {
+      let colIdx;
+      if (activeColGroup === "10-19") colIdx = 0;
+      else if (activeColGroup === "30-39") colIdx = 1;
+      else if (activeColGroup === "50-59") colIdx = 2;
+
+      if (colIdx !== undefined) {
+        const nums = allNumbers[colIdx];
+        setStoreByNum((prev) => {
+          const next = { ...prev };
+          nums.forEach((n) => {
+            const slot = ensureSlot(n);
+            const mergedTickets = buildTicketsForNumber(
+              n,
+              slot.columnHeader ?? Array(10).fill(""),  // keep each number's column headers
+              nextRows,                                  // new row headers
+              checkboxInputs[n] || {}
+            );
+            next[n] = {
+              ...slot,
+              rowHeader: nextRows,
+              tickets: mergedTickets,
+            };
+          });
+          return next;
+        });
+      }
+    }
+
     return nextRows;
   });
+
+  // IMPORTANT: never store header fills in overrides.
+  // Purge all overrides for this row so header fallback shows correctly.
+  setCellOverrides((overrides) => {
+    const updated = { ...overrides };
+    for (let c = 0; c < 10; c++) delete updated[`${row}-${c}`];
+    return updated;
+  });
 };
+
 
 
   // --- Timer logic ---
@@ -701,34 +850,63 @@ const handleRowHeaderChange = (row, value) => {
     });
   };
 
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "F10") {
-        e.preventDefault();
-        window.location.reload();
-      }
-      if (e.key === "F7") {
-        e.preventDefault();
-        selectAllInColumn(0); // 10-19
-      }
-      if (e.key === "F8") {
-        e.preventDefault();
-        selectAllInColumn(1); // 30-39
-      }
-      if (e.key === "F9") {
-        e.preventDefault();
-        selectAllInColumn(2); // 50-59
-      }
-      if (e.key === "F6") {
-        e.preventDefault();
-        if (!isPrinting) handlePrint();
-      }
+useEffect(() => {
+  function handleKeyDown(e) {
+    if (e.key === "F10") {
+      e.preventDefault();
+      window.location.reload();
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line
-  }, [activeFilter]);
+    // --- Mutually exclusive F7/F8/F9 handlers ---
+    const activateGroup = (colIdx, colKey) => {
+      if (activeCheckbox) persistActiveNumber(activeCheckbox);
+
+      if (activeColGroup === colKey) {
+        setActiveColGroup(null);
+        setActiveFButtons([]);
+        setActiveCheckbox(null);
+        setSelected((prev) => prev.map((rowArr) => rowArr.map(() => false)));
+        setCellOverrides({});
+        setColumnHeaders(Array(10).fill(""));
+        setRowHeaders(Array(10).fill(""));
+        return;
+      }
+
+      setActiveColGroup(colKey);
+      setActiveFButtons([colKey]);
+      setActiveCheckbox(null);
+      setSelected((prev) =>
+        prev.map((rowArr) => rowArr.map((_, idx) => idx === colIdx))
+      );
+      setCellOverrides({});
+      setColumnHeaders(Array(10).fill(""));
+      setRowHeaders(Array(10).fill(""));
+    };
+
+    if (e.key === "F7") {
+      e.preventDefault();
+      activateGroup(0, "10-19");
+    }
+    if (e.key === "F8") {
+      e.preventDefault();
+      activateGroup(1, "30-39");
+    }
+    if (e.key === "F9") {
+      e.preventDefault();
+      activateGroup(2, "50-59");
+    }
+
+    if (e.key === "F6") {
+      e.preventDefault();
+      if (!isPrinting) handlePrint();
+    }
+  }
+
+  window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+  // eslint-disable-next-line
+}, [activeFilter, activeCheckbox, activeColGroup]);
+
 
   // --- Column/Range Filters for F7/F8/F9 --- //
   const handleFilter = (colKey) => {
@@ -880,43 +1058,44 @@ function getTicketList() {
   return "";
 }
 
-
 function getCellValue(row, col) {
   const key = `${row}-${col}`;
   const cellIndex = row * 10 + col;
-
-  // respect Odd/Even disabled
   const disabled = isCellDisabled(row, col);
 
-  // 1) Manual override wins (if present and non-empty)
+  // 1) manual override in the visual layer wins
   if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
     return cellOverrides[key];
   }
 
-  // helper: header fallback (never for disabled cells)
-  const getHeaderValue = () => {
+  // helper that computes header fallback from provided headers
+  const headerFallback = (rows, cols) => {
     if (disabled) return "";
-    const rowVal = parseInt(rowHeaders[row] || "0", 10);
-    const colVal = parseInt(columnHeaders[col] || "0", 10);
-    if (rowHeaders[row] && rowHeaders[row] !== "" && columnHeaders[col] && columnHeaders[col] !== "") {
-      return (rowVal + colVal).toString();
-    } else if (columnHeaders[col] && columnHeaders[col] !== "") {
-      return columnHeaders[col];
-    } else if (rowHeaders[row] && rowHeaders[row] !== "") {
-      return rowHeaders[row];
-    }
+    const rHas = rows[row] !== "" && rows[row] != null;
+    const cHas = cols[col] !== "" && cols[col] != null;
+    const rVal = parseInt(rows[row] || "0", 10);
+    const cVal = parseInt(cols[col] || "0", 10);
+    if (rHas && cHas) return String(rVal + cVal);
+    if (cHas) return String(cVal);
+    if (rHas) return String(rVal);
     return "";
   };
 
-  // 2) Single-number checkbox active → show its per-cell value or header fallback
-  if (activeCheckbox && checkboxInputs[activeCheckbox]) {
-    const v = checkboxInputs[activeCheckbox][cellIndex];
+  // 2) if a single number is active, use *its saved headers*
+  if (activeCheckbox) {
+    const slot = storeByNum[activeCheckbox];
+    const effRows = slot?.rowHeader ?? rowHeaders;
+    const effCols = slot?.columnHeader ?? columnHeaders;
+
+    const perCell = checkboxInputs[activeCheckbox];
+    const v = perCell ? perCell[cellIndex] : undefined;
     if (v !== undefined && v !== "") return v;
-    const hv = getHeaderValue();
+
+    const hv = headerFallback(effRows, effCols);
     if (hv !== "") return hv;
   }
 
-  // 3) Column group active → show first matching number's value or header fallback
+  // 3) if a column group is active, show first matching manual; else fallback to current UI headers
   if (activeColGroup) {
     let colIdx;
     if (activeColGroup === "10-19") colIdx = 0;
@@ -926,19 +1105,22 @@ function getCellValue(row, col) {
     if (colIdx !== undefined) {
       const nums = allNumbers[colIdx];
       for (let num of nums) {
-        if (checkboxInputs[num] && checkboxInputs[num][cellIndex]) {
-          const v = checkboxInputs[num][cellIndex];
-          if (v !== "") return v;
+        const m = checkboxInputs[num];
+        if (m && m[cellIndex] !== undefined && m[cellIndex] !== "") {
+          return m[cellIndex];
         }
       }
     }
-    const hv = getHeaderValue();
+    const hv = headerFallback(rowHeaders, columnHeaders);
     if (hv !== "") return hv;
   }
 
-  // 4) No active checkbox/group → do not show headers in the grid (unchanged behavior)
+  // 4) none active → don't show header fills in grid
   return "";
 }
+
+
+
 
 
 
@@ -1453,22 +1635,22 @@ const canPrint = remainSecs > 30 && displayTotalQuantity > 0;
     toggle(row, colIdx);
 
     if (!wasChecked) {
-      // ✅ checking a new number -> save previous active, then load this one
+      // save previous active number (if any)
       if (activeCheckbox) persistActiveNumber(activeCheckbox);
 
+      // switch active
       setActiveCheckbox(checkboxNum);
       setActiveColGroup(null);
 
-      // 🔄 refresh UI (blank slate)
+      // IMPORTANT: blank the UI before loading this number
       setCellOverrides({});
       setColumnHeaders(Array(10).fill(""));
       setRowHeaders(Array(10).fill(""));
 
-      // ⬇️ restore saved state for this number (if any)
+      // load saved state for this number (headers + manual deltas)
       loadNumberIntoUI(checkboxNum);
     } else {
-      // ❎ unchecking this number
-      // (optional) clear its per-cell map in RAM
+      // unchecking this number
       setCheckboxInputs((prev) => {
         const updated = { ...prev };
         delete updated[checkboxNum];
@@ -1476,7 +1658,6 @@ const canPrint = remainSecs > 30 && displayTotalQuantity > 0;
       });
 
       if (activeCheckbox === checkboxNum) {
-        // save before leaving
         persistActiveNumber(checkboxNum);
         setActiveCheckbox(null);
         setActiveColGroup(null);
@@ -1491,6 +1672,7 @@ const canPrint = remainSecs > 30 && displayTotalQuantity > 0;
   className="peer appearance-none w-6 h-6 rounded bg-white border-2 border-[#4A314D] checked:bg-gradient-to-r checked:from-purple-600 checked:to-pink-600 checked:border-purple-600 flex-shrink-0 transition-all duration-200 hover:scale-110"
   style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
 />
+
 
                     {/* Enhanced Checkmark */}
                     <span
@@ -1743,18 +1925,31 @@ onClick={() => {
       });
 
       // 2) Mirror into storeByNum (persist)
-      const idxKey = String(row * 10 + col).padStart(2, "0");
-      setStoreByNum((prev) => {
-        const next = { ...prev };
-        nums.forEach((n) => {
-          const slot = ensureSlot(n);
-          const t = { ...(slot.tickets || {}) };
-          if (input === "" || input == null) delete t[`${n}-${idxKey}`];
-          else t[`${n}-${idxKey}`] = String(input);
-          next[n] = { ...slot, tickets: t };
-        });
-        return next;
-      });
+const idxKey = String(row * 10 + col).padStart(2, "0");
+setStoreByNum((prev) => {
+  const next = { ...prev };
+  nums.forEach((n) => {
+    const slot = ensureSlot(n);
+    const t = { ...(slot.tickets || {}) };
+
+    const rv = slot.rowHeader?.[row] ?? rowHeaders[row] ?? "";
+    const cv = slot.columnHeader?.[col] ?? columnHeaders[col] ?? "";
+    const rNum = parseInt(rv || "0", 10);
+    const cNum = parseInt(cv || "0", 10);
+    const headerSum = (rv ? rNum : 0) + (cv ? cNum : 0);
+
+    if (input === "" || input == null) {
+
+    } else {
+      const manual = parseInt(input || "0", 10);
+      t[`${n}-${idxKey}`] = String(manual + headerSum);
+    }
+
+    next[n] = { ...slot, tickets: t };
+  });
+  return next;
+});
+
 
       // 3) Only clear manual override when clearing
       if (input === "") {
@@ -1779,14 +1974,28 @@ onClick={() => {
       });
 
       // Mirror into storeByNum (persist)
-      const idxKey = String(row * 10 + col).padStart(2, "0");
-      setStoreByNum((prev) => {
-        const slot = ensureSlot(activeCheckbox);
-        const t = { ...(slot.tickets || {}) };
-        if (input === "" || input == null) delete t[`${activeCheckbox}-${idxKey}`];
-        else t[`${activeCheckbox}-${idxKey}`] = String(input);
-        return { ...prev, [activeCheckbox]: { ...slot, tickets: t } };
-      });
+const idxKey = String(row * 10 + col).padStart(2, "0");
+setStoreByNum((prev) => {
+  const slot = ensureSlot(activeCheckbox);
+  const t = { ...(slot.tickets || {}) };
+
+  const rv = slot.rowHeader?.[row] ?? rowHeaders[row] ?? "";
+  const cv = slot.columnHeader?.[col] ?? columnHeaders[col] ?? "";
+  const rNum = parseInt(rv || "0", 10);
+  const cNum = parseInt(cv || "0", 10);
+  const headerSum = (rv ? rNum : 0) + (cv ? cNum : 0);
+
+  if (input === "" || input == null) {
+    // remove the manual+header value (header-only still comes from expandHeaderTickets at save time)
+    delete t[`${activeCheckbox}-${idxKey}`];
+  } else {
+    const manual = parseInt(input || "0", 10);
+    t[`${activeCheckbox}-${idxKey}`] = String(manual + headerSum);
+  }
+
+  return { ...prev, [activeCheckbox]: { ...slot, tickets: t } };
+});
+
 
       // Only clear manual override when clearing
       if (input === "") {
