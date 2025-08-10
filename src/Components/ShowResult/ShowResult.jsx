@@ -271,16 +271,32 @@ function CasinoSlotMachine({ rows }) {
 }
 
 
+function getLoginIdFromToken() {
+  try {
+    if (typeof window === "undefined") return "-";
+    const token = localStorage.getItem("userToken");
+    if (!token) return "-";
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload?.id ? String(payload.id) : "-";
+  } catch {
+    return "-";
+  }
+}
+
+
+
 // ----------- Main Component --------------
 export default function ShowResult({ drawTime }) {
   const [ticketNumbers, setTicketNumbers] = useState([]);
   const [leverActive, setLeverActive] = useState(false);
-
-  // Game Info States
-  const [gameId, setGameId] = useState("-");
   const [lastPoints, setLastPoints] = useState("-");
   const [lastTicket, setLastTicket] = useState("-");
   const [balance, setBalance] = useState("-");
+  const [gameId, setGameId] = useState("-");
+  useEffect(() => {
+    setGameId(getLoginIdFromToken());
+  }, []);
+
 
   // Game ID from JWT
   useEffect(() => {
@@ -314,30 +330,28 @@ export default function ShowResult({ drawTime }) {
     }
   }, [gameId]);
 
-  useEffect(() => {
-    axios
-      .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
-        drawTime: getBackendDrawTime(drawTime),
-        adminId: gameId,
-      })
-      .then((res) => {
-        let tickets = [];
-        if (Array.isArray(res.data.selectedTickets)) {
-          tickets = res.data.selectedTickets;
-        } else if (res.data.numbersBySeries) {
-          tickets = Object.values(res.data.numbersBySeries).flat();
-        }
-        const [series10, series30, series50] = getSeriesRows(tickets);
-        setTicketNumbers([series10, series30, series50]);
-      })
-      .catch((err) => {
-        setTicketNumbers([
-          Array(10).fill(""),
-          Array(10).fill(""),
-          Array(10).fill(""),
-        ]);
-      });
-  }, [drawTime]);
+useEffect(() => {
+  if (!drawTime || !gameId || gameId === "-") return; // guard
+
+  axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
+    drawTime: getBackendDrawTime(drawTime),
+    adminId: gameId,
+  })
+  .then((res) => {
+    let tickets = [];
+    if (Array.isArray(res.data.selectedTickets)) {
+      tickets = res.data.selectedTickets;
+    } else if (res.data.numbersBySeries) {
+      tickets = Object.values(res.data.numbersBySeries).flat();
+    }
+    const [series10, series30, series50] = getSeriesRows(tickets);
+    setTicketNumbers([series10, series30, series50]);
+  })
+  .catch(() => {
+    setTicketNumbers([Array(10).fill(""), Array(10).fill(""), Array(10).fill("")]);
+  });
+}, [drawTime, gameId]);
+
 
   const handleManualRefresh = () => {
     if (leverActive) return;
