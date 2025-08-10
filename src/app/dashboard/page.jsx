@@ -1063,12 +1063,13 @@ function getCellValue(row, col) {
   const cellIndex = row * 10 + col;
   const disabled = isCellDisabled(row, col);
 
-  // 1) manual override in the visual layer wins
+  // 1) Visual/manual override layer (used when editing outside checkbox/col-group)
+  //    Keep as-is: show exactly what was typed here (no header math).
   if (cellOverrides[key] !== undefined && cellOverrides[key] !== "") {
     return cellOverrides[key];
   }
 
-  // helper that computes header fallback from provided headers
+  // helper: compute header fallback from provided headers
   const headerFallback = (rows, cols) => {
     if (disabled) return "";
     const rHas = rows[row] !== "" && rows[row] != null;
@@ -1081,21 +1082,37 @@ function getCellValue(row, col) {
     return "";
   };
 
-  // 2) if a single number is active, use *its saved headers*
+  // helper: manual + headerSum using given rows/cols
+  const addHeaders = (manualStr, rows, cols) => {
+    const rHas = rows[row] !== "" && rows[row] != null;
+    const cHas = cols[col] !== "" && cols[col] != null;
+    const rVal = parseInt(rows[row] || "0", 10);
+    const cVal = parseInt(cols[col] || "0", 10);
+    const headerSum = (rHas ? rVal : 0) + (cHas ? cVal : 0);
+    const manual = parseInt(manualStr || "0", 10);
+    return String(manual + headerSum);
+  };
+
+  // 2) Single-number active → use that number's saved headers.
   if (activeCheckbox) {
     const slot = storeByNum[activeCheckbox];
     const effRows = slot?.rowHeader ?? rowHeaders;
     const effCols = slot?.columnHeader ?? columnHeaders;
 
     const perCell = checkboxInputs[activeCheckbox];
-    const v = perCell ? perCell[cellIndex] : undefined;
-    if (v !== undefined && v !== "") return v;
+    const manual = perCell ? perCell[cellIndex] : undefined;
 
+    // If there's a manual for this cell, show manual + headers for this number
+    if (manual !== undefined && manual !== "") {
+      return addHeaders(manual, effRows, effCols);
+    }
+
+    // Otherwise, show header fallback for this number
     const hv = headerFallback(effRows, effCols);
     if (hv !== "") return hv;
   }
 
-  // 3) if a column group is active, show first matching manual; else fallback to current UI headers
+  // 3) Column group active (F7/F8/F9) → combine any manual with CURRENT UI headers
   if (activeColGroup) {
     let colIdx;
     if (activeColGroup === "10-19") colIdx = 0;
@@ -1104,23 +1121,24 @@ function getCellValue(row, col) {
 
     if (colIdx !== undefined) {
       const nums = allNumbers[colIdx];
-      for (let num of nums) {
-        const m = checkboxInputs[num];
+      // find first manual for this cell among numbers in the group
+      for (let n of nums) {
+        const m = checkboxInputs[n];
         if (m && m[cellIndex] !== undefined && m[cellIndex] !== "") {
-          return m[cellIndex];
+          // manual exists → show manual + (current UI) headers
+          return addHeaders(m[cellIndex], rowHeaders, columnHeaders);
         }
       }
     }
+
+    // no manual → show header fallback from current UI headers
     const hv = headerFallback(rowHeaders, columnHeaders);
     if (hv !== "") return hv;
   }
 
-  // 4) none active → don't show header fills in grid
+  // 4) None active → don't show header fills in grid
   return "";
 }
-
-
-
 
 
 
