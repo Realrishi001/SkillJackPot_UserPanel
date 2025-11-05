@@ -35,7 +35,7 @@ const Login = () => {
       );
 
       // Debug: log the response from the server
-      console.log("Response from server:", res);
+      // console.log("Response from server:", res);
 
       // Check if token exists in response
       if (res.data && res.data.token) {

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 
@@ -114,6 +114,7 @@ function LeftGameId({ gameId }) {
     </div>
   );
 }
+
 function RightGameInfo({ lastPoints, lastTicket, balance }) {
   return (
     <div className="flex flex-col items-end gap-2 w-full md:w-auto mt-4 md:mt-0">
@@ -270,7 +271,6 @@ function CasinoSlotMachine({ rows }) {
   );
 }
 
-
 function getLoginIdFromToken() {
   try {
     if (typeof window === "undefined") return "-";
@@ -283,37 +283,24 @@ function getLoginIdFromToken() {
   }
 }
 
-
-
 // ----------- Main Component --------------
-export default function ShowResult({ drawTime }) {
+export default function ShowResult({ drawTime, refreshKey }) {
   const [ticketNumbers, setTicketNumbers] = useState([]);
   const [leverActive, setLeverActive] = useState(false);
   const [lastPoints, setLastPoints] = useState("-");
   const [lastTicket, setLastTicket] = useState("-");
   const [balance, setBalance] = useState("-");
   const [gameId, setGameId] = useState("-");
+
+  // // Track refreshKey changes
+  // useEffect(() => {
+  //   console.log("refreshKey changed:", refreshKey);
+  // }, [refreshKey]);
+
   useEffect(() => {
     setGameId(getLoginIdFromToken());
   }, []);
 
-
-  // Game ID from JWT
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const token = localStorage.getItem("userToken");
-        if (token) {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          if (payload && payload.id) setGameId(payload.id);
-        }
-      } catch (err) {
-        setGameId("-");
-      }
-    }
-  }, []);
-
-  // Fetch Points/Ticket/Limit
   useEffect(() => {
     if (gameId && gameId !== "-") {
       axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/navbar-details`, { loginId: gameId })
@@ -328,30 +315,29 @@ export default function ShowResult({ drawTime }) {
           setBalance("-");
         });
     }
-  }, [gameId]);
+  }, [gameId, refreshKey]);
 
-useEffect(() => {
-  if (!drawTime || !gameId || gameId === "-") return; // guard
+  useEffect(() => {
+    if (!drawTime || !gameId || gameId === "-") return;
 
-  axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
-    drawTime: getBackendDrawTime(drawTime),
-    adminId: gameId,
-  })
-  .then((res) => {
-    let tickets = [];
-    if (Array.isArray(res.data.selectedTickets)) {
-      tickets = res.data.selectedTickets;
-    } else if (res.data.numbersBySeries) {
-      tickets = Object.values(res.data.numbersBySeries).flat();
-    }
-    const [series10, series30, series50] = getSeriesRows(tickets);
-    setTicketNumbers([series10, series30, series50]);
-  })
-  .catch(() => {
-    setTicketNumbers([Array(10).fill(""), Array(10).fill(""), Array(10).fill("")]);
-  });
-}, [drawTime, gameId]);
-
+    axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
+      drawTime: getBackendDrawTime(drawTime),
+      adminId: gameId,
+    })
+    .then((res) => {
+      let tickets = [];
+      if (Array.isArray(res.data.selectedTickets)) {
+        tickets = res.data.selectedTickets;
+      } else if (res.data.numbersBySeries) {
+        tickets = Object.values(res.data.numbersBySeries).flat();
+      }
+      const [series10, series30, series50] = getSeriesRows(tickets);
+      setTicketNumbers([series10, series30, series50]);
+    })
+    .catch(() => {
+      setTicketNumbers([Array(10).fill(""), Array(10).fill(""), Array(10).fill("")]);
+    });
+  }, [drawTime, gameId]);
 
   const handleManualRefresh = () => {
     if (leverActive) return;
