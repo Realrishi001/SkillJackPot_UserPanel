@@ -142,6 +142,12 @@ export default function Page() {
   const [activeTypeFilter, setActiveTypeFilter] = useState("all");
   const [activeColFilter, setActiveColFilter] = useState(null);
 
+  const [gameIdBox, setGameIdBox] = useState("-");
+  const [lastPoints, setLastPoints] = useState("-");
+  const [lastTicket, setLastTicket] = useState("-");
+  const [balance, setBalance] = useState("-");
+
+
   // Constant Quantity and Points for demo (change values as needed)
   const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   const [points, setPoints] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -1203,6 +1209,29 @@ export default function Page() {
     }
   }
 
+    useEffect(() => {
+    const id = getLoginIdFromToken();
+    if (!id) return;
+
+    setGameIdBox(String(id));
+
+    axios
+      .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/navbar-details`, {
+        loginId: id,
+      })
+      .then((res) => {
+        setLastPoints(res.data.lastTotalPoint ?? "-");
+        setLastTicket(res.data.lastTicketNumber ?? "-");
+        setBalance(res.data.balance ?? "-");
+      })
+      .catch(() => {
+        setLastPoints("-");
+        setLastTicket("-");
+        setBalance("-");
+      });
+  }, []);
+
+
   function getFormattedDateTime() {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
@@ -1513,146 +1542,131 @@ useEffect(() => {
         <ShowResult drawTime={currentDrawSlot} refreshKey={refreshKey} />
       </div>
 
-      {/* Enhanced Draw Header */}
-      <div className="w-full flex flex-col sm:flex-row justify-between items-center py-1 border-slate-700/50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-2xl backdrop-blur-sm px-6">
-        {/* Filter Buttons */}
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2 mb-4 justify-center ">
-          <button
-            onClick={() => {
-              const turningOff = activeTypeFilter === "all";
+{/* Enhanced Professional Draw Header */}
+<div className="w-full flex flex-col lg:flex-row items-center justify-between gap-4 px-4 py-4">
 
-              if (turningOff) {
-                setActiveTypeFilter(null);
-                // hard deselect everything
-                setSelected(
-                  Array(10)
-                    .fill(null)
-                    .map(() => Array(3).fill(false))
-                );
-                setQuantities(Array(10).fill(0));
-                setPoints(Array(10).fill(0));
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-                // optional UI clear:
-                // setCellOverrides({}); setColumnHeaders(Array(10).fill("")); setRowHeaders(Array(10).fill(""));
-              } else {
-                setActiveTypeFilter("all");
-                selectByTypeFilter("all"); // keep your behavior: selects ALL checkboxes
-                if (activeCheckbox) persistActiveNumber(activeCheckbox);
-                setActiveCheckbox(null);
-                setActiveColGroup("ALL"); // <<—— this is the key
-              }
-            }}
-            className={`px-4 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              activeTypeFilter === "all"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-            }`}
-          >
-            All
-          </button>
+  {/* LEFT: Number Filters */}
+  <div className="w-full lg:w-auto flex flex-col gap-3">
+    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center lg:text-left">
+      Number Filters
+    </h3>
+    <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+      {[
+        { label: "All", value: "all", activeClass: "from-purple-600 to-pink-600" },
+        { label: "Even", value: "even", activeClass: "from-blue-600 to-indigo-600" },
+        { label: "Odd", value: "odd", activeClass: "from-rose-600 to-red-500" },
+      ].map((btn) => (
+        <button
+          key={btn.value}
+          onClick={() => {
+            const turningOff = activeTypeFilter === btn.value;
+            if (turningOff) {
+              setActiveTypeFilter(null);
+              setSelected(Array(10).fill(null).map(() => Array(3).fill(false)));
+              setQuantities(Array(10).fill(0));
+              setPoints(Array(10).fill(0));
+              setActiveCheckbox(null);
+              setActiveColGroup(null);
+            } else {
+              setActiveTypeFilter(btn.value);
+              selectByTypeFilter(btn.value);
+              setActiveCheckbox(null);
+              setActiveColGroup(btn.label.toUpperCase());
+            }
+          }}
+          className={`px-4 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+            activeTypeFilter === btn.value
+              ? `text-white bg-gradient-to-r ${btn.activeClass} shadow-lg`
+              : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+          }`}
+        >
+          {btn.label}
+        </button>
+      ))}
 
-          <button
-            onClick={() => {
-              if (activeTypeFilter === "even") {
-                setActiveTypeFilter(null);
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              } else {
-                setActiveTypeFilter("even");
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              }
-            }}
-            className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              activeTypeFilter === "even"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-            }`}
-          >
-            Even
-          </button>
-          <button
-            onClick={() => {
-              if (activeTypeFilter === "odd") {
-                setActiveTypeFilter(null);
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              } else {
-                setActiveTypeFilter("odd");
-                setActiveCheckbox(null);
-                setActiveColGroup(null);
-              }
-            }}
-            className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              activeTypeFilter === "odd"
-                ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg"
-                : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-            }`}
-          >
-            Odd
-          </button>
+      {/* FP Mode */}
+      <button
+        onClick={() => {
+          setIsFPMode(!isFPMode);
+          if (isFPMode) {
+            clearFPHighlights();
+            setActiveFPSetIndex(null);
+          }
+        }}
+        className={`px-4 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+          isFPMode
+            ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
+            : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
+        }`}
+      >
+        FP Mode
+      </button>
+    </div>
+  </div>
 
-          <button
-            onClick={() => {
-              setIsFPMode(!isFPMode);
-              if (isFPMode) {
-                // If turning off FP mode, clear highlights
-                clearFPHighlights();
-                setActiveFPSetIndex(null);
-              }
-            }}
-            className={`px-5 py-2.5 rounded font-bold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              isFPMode
-                ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
-                : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
-            }`}
-          >
-            FP
-          </button>
-        </div>
-
-        {/* Remain Time Section */}
-        <div className="flex items-center gap-2 px-6 py-1 bg-slate-800/80 rounded border border-red-500/30 shadow-lg mb-4 sm:mb-0">
-          <Clock className="w-6 h-6 text-red-400 animate-pulse" />
-          <span className="text-sm sm:text-sm font-bold text-green-400 tracking-wider">
-            Remain Time
-          </span>
-          <span className="text-lg sm:text-xl font-mono font-bold text-red-400 bg-slate-900/50 px-3 py-1 rounded-lg">
+  {/* CENTER: Timer + Draw Info (Redesigned Clean Layout) */}
+  <div className="flex flex-col items-center justify-center flex-1 max-w-2xl px-4">
+    <div className="flex flex-col md:flex-row items-center justify-center gap-6 w-full">
+      
+      {/* Time Remaining */}
+      <div className="flex flex-col items-center">
+        <span className="text-xs font-medium text-slate-400 mb-1">Time Remaining</span>
+        <div className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md">
+          <Clock className="w-4 h-4 text-red-400 animate-pulse" />
+          <span className="text-xl font-mono font-bold text-red-400">
             {remainTime}
           </span>
         </div>
+      </div>
 
-        {/* Draw Time and Draw Date Sections */}
-        <div className="flex flex-wrap gap-4 sm:gap-6 items-center justify-center sm:justify-start">
-          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 rounded border border-green-500/30 w-full sm:w-auto">
-            <Play className="w-5 h-5 text-green-400" />
-            <span className="text-sm sm:text-sm font-bold text-green-400">
-              Draw Time
-            </span>
-            <span className="text-lg sm:text-md font-mono font-bold text-red-400">
-              {currentDrawSlot}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 rounded border border-green-500/30 w-full sm:w-auto">
-            <Calendar className="w-5 h-5 text-green-400" />
-            <span className="text-sm sm:text-sm font-bold text-green-400">
-              Draw Date
-            </span>
-            <span className="text-lg sm:text-md font-mono font-bold text-red-400">
-              {drawDate}
-            </span>
-          </div>
+      {/* Draw Date & Time */}
+      <div className="flex flex-col items-center">
+        <span className="text-xs font-medium text-slate-400 mb-1">
+          Draw Date & Time
+        </span>
+        <div className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md">
+          <Calendar className="w-4 h-4 text-green-400" />
+          <span className="text-sm font-mono font-bold text-red-400">
+            {drawDate} | {currentDrawSlot}
+          </span>
         </div>
       </div>
+    </div>
+  </div>
+
+  {/* RIGHT: Game Status */}
+  <div className="w-full lg:w-[400px] flex flex-col gap-3">
+    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center lg:text-left">
+      Game Status
+    </h3>
+    <div className="grid grid-cols-4 gap-3">
+      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+        <span className="text-[10px] text-slate-400 font-medium mb-1">Game ID</span>
+        <span className="text-sm font-mono font-bold text-purple-400 truncate">{gameIdBox}</span>
+      </div>
+      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+        <span className="text-[10px] text-slate-400 font-medium mb-1">Last Points</span>
+        <span className="text-sm font-mono font-bold text-pink-400">{lastPoints}</span>
+      </div>
+      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+        <span className="text-[10px] text-slate-400 font-medium mb-1">Last Ticket</span>
+        <span className="text-sm font-mono font-bold text-cyan-400 truncate">{lastTicket}</span>
+      </div>
+      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+        <span className="text-[10px] text-slate-400 font-medium mb-1">Balance Limit</span>
+        <span className="text-sm font-mono font-bold text-emerald-400">{balance}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 
       {/* Main Content Row */}
       <div className="flex flex-wrap p-2 gap-2">
         {/* Left Panel - Number Selectors, ODD EVEN FP */}
-        <div className="rounded-2xl shadow-2xl bg-gradient-to-b from-slate-100/95 to-slate-300/80 p-2 border-2 border-gray-300/50 min-h-[700px] w-full lg:max-w-[320px] sm:w-[360px] backdrop-blur-sm">
+        <div className="rounded-sm shadow-2xl bg-gradient-to-b from-slate-100/95 to-slate-300/80 p-2 border-2 border-gray-300/50 min-h-[600px] w-full lg:max-w-[320px] sm:w-[360px] backdrop-blur-sm">
           {/* Tabs for Filter */}
-          <div className="flex gap-3 flex-wrap sm:flex-nowrap sm:w-auto w-full justify-center sm:justify-start mb-2 sm:mb-0">
+          <div className="flex gap-3 flex-wrap sm:flex-nowrap sm:w-auto w-full lg:justify-between sm:justify-start mb-2 sm:mb-0">
             {[
               { key: "10-19", label: "F7 (10-19)" },
               { key: "30-39", label: "F8 (30-39)" },
@@ -1661,7 +1675,7 @@ useEffect(() => {
               <button
                 key={tab.key}
                 onClick={() => handleColButton(tab.key)}
-                className={`px-4 py-1 rounded font-bold text-md text-white
+                className={`px-2 py-1 rounded font-bold text-sm w-full  text-white
           ${
             activeFilter === tab.key
               ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
@@ -1782,7 +1796,7 @@ useEffect(() => {
           <div className="flex gap-3 mt-6">
             <button
               type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
                 !canPrint ? "opacity-50 cursor-not-allowed" : ""
               }`}
               onClick={handlePrint}
@@ -1800,7 +1814,7 @@ useEffect(() => {
                 setStoreByNum({});
                 localStorage.removeItem(LS_KEY);
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95"
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95 text-sm"
             >
               <RotateCcw className="w-5 h-5" />
               Reset (F10)
@@ -1809,7 +1823,7 @@ useEffect(() => {
         </div>
 
         {/* Main Table (unchanged from before) */}
-        <div className="flex-1 bg-gradient-to-b from-slate-800/70 to-slate-900/90 rounded-2xl shadow-2xl border-2 border-slate-700/50 transparent-scrollbar p-4 overflow-hidden backdrop-blur-sm">
+        <div className="flex-1 bg-gradient-to-b from-slate-800/70 to-slate-900/90 rounded-sm shadow-2xl border-2 border-slate-700/50 transparent-scrollbar p-4 overflow-hidden backdrop-blur-sm">
           {/* Enhanced Table */}
           <div className="overflow-x-auto transparent-scrollbar">
             <table className="w-full">
@@ -2224,13 +2238,13 @@ useEffect(() => {
                     ))}
                     <td className="bg-transparent"></td>
                     <td className="p-1 text-center">
-                      <div className="w-16 h-8 rounded-lg bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
+                      <div className="w-16 h-8 rounded-sm bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
                         {updatedQuantity[row]}
                       </div>
                     </td>
 
                     <td className="p-1 text-center">
-                      <div className="w-16 h-8 rounded-lg bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
+                      <div className="w-16 h-8 rounded-sm bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
                         {updatedPoints[row]}
                       </div>
                     </td>
@@ -2242,37 +2256,19 @@ useEffect(() => {
                     colSpan={10 + 2}
                     className="p-1 text-center font-bold text-purple-300"
                   >
-                    TOTALS
-                  </td>
-                  <td className="p-1 text-center">
-                    <div className="font-extrabold text-lg text-yellow-400 bg-slate-900/50 px-3 py-2 rounded-lg border border-yellow-500/50">
-                      {displayTotalQuantity}
-                    </div>
-                  </td>
-                  <td className="p-1 text-center">
-                    <div className="font-extrabold text-lg text-pink-400 bg-slate-900/50 px-3 py-2 rounded-lg border border-pink-500/50">
-                      {displayTotalPoints}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Enhanced Footer */}
-          <div className="flex items-center mt-6 gap-3 p-3 bg-slate-800/30 rounded-xl border border-slate-700/50">
-            <div className="flex-1">
+          <div className="flex items-center mt-1 gap-3 ">
+            <div className="flex-1 ">
               <input
                 type="text"
                 placeholder="Transaction No/Bar Code"
                 value={transactionInput}
                 onChange={(e) => setTransactionInput(e.target.value)}
-                className="w-full py-3 px-5 rounded-xl bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
+                className="w-full py-1 px-5 rounded-sm bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
               />
             </div>
             <div className="flex-none flex gap-2">
               <button
-                className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center gap-3 px-6 rounded-sm font-bold h-10  text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={!transactionInput.trim()}
                 onClick={handleClaimTicket}
               >
@@ -2281,13 +2277,28 @@ useEffect(() => {
               </button>
 
               <button
-                className="flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-lg hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
+                className="flex items-center gap-3 px-6 py-1 rounded-sm font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
                 onClick={() => setAdvanceModalOpen(true)}
               >
                 <Zap className="w-5 h-5" />
                 Advance Draw
               </button>
             </div>
+          </div>
+                  </td>
+                  <td className="p-1 text-center">
+                    <div className="font-extrabold text-lg text-yellow-400 bg-slate-900/50 px-3 py-2 rounded-sm border border-yellow-500/50">
+                      {displayTotalQuantity}
+                    </div>
+                  </td>
+                  <td className="p-1 text-center">
+                    <div className="font-extrabold text-lg text-pink-400 bg-slate-900/50 px-3 py-2 rounded-sm border border-pink-500/50">
+                      {displayTotalPoints}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
