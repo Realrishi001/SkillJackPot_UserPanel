@@ -147,6 +147,7 @@ export default function Page() {
   const [lastTicket, setLastTicket] = useState("-");
   const [balance, setBalance] = useState("-");
 
+  const isPrintingRef = useRef(false);
 
   // Constant Quantity and Points for demo (change values as needed)
   const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -1394,7 +1395,9 @@ useEffect(() => {
   }, [activeCheckbox, columnHeaders, rowHeaders, checkboxInputs]);
 
 const handlePrint = async () => {
-  if (isPrinting) return;
+  // Synchronous guard: blocks ultra-fast double-clicks
+  if (isPrintingRef.current) return;
+  isPrintingRef.current = true;
   setIsPrinting(true);
 
   try {
@@ -1404,40 +1407,38 @@ const handlePrint = async () => {
       alert("Print is disabled during the last 30 seconds before draw time!");
       return;
     }
+
     if (totalUpdatedQuantity === 0) {
       alert("No quantity selected or no tickets to print.");
       return;
     }
 
-    // Get loginId from JWT
     const loginId = getLoginIdFromToken();
     if (!loginId) {
       alert("User not logged in.");
       return;
     }
 
-    // Current date-time (formatted)
     const gameTime = getFormattedDateTime();
 
-    // Payload to backend
     const payload = {
       gameTime,
       ticketNumber: ticketList.join(", "),
       totalQuatity: displayTotalQuantity,
       totalPoints: displayTotalPoints,
       loginId,
-      drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+      drawTime:
+        advanceDrawTimes.length > 0
+          ? advanceDrawTimes
+          : [currentDrawSlot],
     };
 
-    // Save ticket data to backend
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
       payload
     );
 
-    // Trigger the refresh by incrementing refreshKey
     setRefreshKey((prev) => prev + 1);
-    // console.log(refreshKey);
 
     if (response.status === 201) {
       const data = response.data || {};
@@ -1447,11 +1448,13 @@ const handlePrint = async () => {
 
       alert(`Tickets saved successfully! Ticket ID: ${ticketId}`);
 
-      // Generate the receipt with ticketId
       generatePrintReceipt(
         {
           gameTime,
-          drawTime: advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+          drawTime:
+            advanceDrawTimes.length > 0
+              ? advanceDrawTimes
+              : [currentDrawSlot],
           loginId,
           ticketNumber: ticketList.join(", "),
           totalQuatity: displayTotalQuantity,
@@ -1469,15 +1472,21 @@ const handlePrint = async () => {
       localStorage.removeItem("checkboxInputs");
       setAdvanceDrawTimes([]);
     } else {
-      alert("Failed to save tickets: " + (response.data?.message || "Unknown error"));
+      alert(
+        "Failed to save tickets: " +
+          (response.data?.message || "Unknown error")
+      );
     }
-
   } catch (error) {
     alert(
       "Error saving tickets: " +
-        (error?.response?.data?.message || error?.response?.data?.error || error.message)
+        (error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error.message)
     );
   } finally {
+    // Release lock in ALL cases
+    isPrintingRef.current = false;
     setIsPrinting(false);
   }
 };
@@ -1567,13 +1576,10 @@ useEffect(() => {
       </div>
 
 {/* Enhanced Professional Draw Header */}
-<div className="w-full flex flex-col lg:flex-row items-center justify-between gap-4 px-4 py-4">
+<div className="w-full flex flex-col lg:flex-row items-center justify-between gap-4 px-4">
 
   {/* LEFT: Number Filters */}
   <div className="w-full lg:w-auto flex flex-col gap-3">
-    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center lg:text-left">
-      Number Filters
-    </h3>
     <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
       {[
         { label: "All", value: "all", activeClass: "from-purple-600 to-pink-600" },
@@ -1628,62 +1634,53 @@ useEffect(() => {
     </div>
   </div>
 
-  {/* CENTER: Timer + Draw Info (Redesigned Clean Layout) */}
-  <div className="flex flex-col items-center justify-center flex-1 max-w-2xl px-4">
-    <div className="flex flex-col md:flex-row items-center justify-center gap-6 w-full">
-      
+  {/* CENTER + RIGHT: Combined Section */}
+  <div className="w-full lg:flex-1 flex flex-col lg:flex-row items-center justify-between gap-4">
+    
+    {/* Timer + Draw Info */}
+    <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6">
       {/* Time Remaining */}
-      <div className="flex flex-col items-center">
-        <span className="text-xs font-medium text-slate-400 mb-1">Time Remaining</span>
-        <div className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md">
-          <Clock className="w-4 h-4 text-red-400 animate-pulse" />
-          <span className="text-xl font-mono font-bold text-red-400">
-            {remainTime}
-          </span>
+      <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md min-w-[180px]">
+        <Clock className="w-4 h-4 text-red-400 animate-pulse flex-shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-[10px] text-slate-400">Time Remaining</span>
+          <span className="text-lg font-mono font-bold text-red-400">{remainTime}</span>
         </div>
       </div>
 
       {/* Draw Date & Time */}
-      <div className="flex flex-col items-center">
-        <span className="text-xs font-medium text-slate-400 mb-1">
-          Draw Date & Time
-        </span>
-        <div className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md">
-          <Calendar className="w-4 h-4 text-green-400" />
-          <span className="text-sm font-mono font-bold text-red-400">
-            {drawDate} | {currentDrawSlot}
-          </span>
+      <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md min-w-[200px]">
+        <Calendar className="w-4 h-4 text-green-400 flex-shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-[10px] text-slate-400">Draw Date & Time</span>
+          <span className="text-sm font-mono font-bold text-red-400">{drawDate} | {currentDrawSlot}</span>
+        </div>
+      </div>
+    </div>
+
+    {/* Game Status */}
+    <div className="w-full lg:w-auto">
+      <div className="grid grid-cols-4 gap-2 min-w-[400px]">
+        <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+          <span className="text-[10px] text-slate-400 font-medium">Game ID</span>
+          <span className="text-xs font-mono font-bold text-purple-400 truncate">{gameIdBox}</span>
+        </div>
+        <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+          <span className="text-[10px] text-slate-400 font-medium">Last Points</span>
+          <span className="text-xs font-mono font-bold text-pink-400">{lastPoints}</span>
+        </div>
+        <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+          <span className="text-[10px] text-slate-400 font-medium">Last Ticket</span>
+          <span className="text-xs font-mono font-bold text-cyan-400 truncate">{lastTicket}</span>
+        </div>
+        <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+          <span className="text-[10px] text-slate-400 font-medium">Balance Limit</span>
+          <span className="text-xs font-mono font-bold text-emerald-400">{balance}</span>
         </div>
       </div>
     </div>
   </div>
-
-  {/* RIGHT: Game Status */}
-  <div className="w-full lg:w-[400px] flex flex-col gap-3">
-    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center lg:text-left">
-      Game Status
-    </h3>
-    <div className="grid grid-cols-4 gap-3">
-      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-        <span className="text-[10px] text-slate-400 font-medium mb-1">Game ID</span>
-        <span className="text-sm font-mono font-bold text-purple-400 truncate">{gameIdBox}</span>
-      </div>
-      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-        <span className="text-[10px] text-slate-400 font-medium mb-1">Last Points</span>
-        <span className="text-sm font-mono font-bold text-pink-400">{lastPoints}</span>
-      </div>
-      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-        <span className="text-[10px] text-slate-400 font-medium mb-1">Last Ticket</span>
-        <span className="text-sm font-mono font-bold text-cyan-400 truncate">{lastTicket}</span>
-      </div>
-      <div className="p-3 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-        <span className="text-[10px] text-slate-400 font-medium mb-1">Balance Limit</span>
-        <span className="text-sm font-mono font-bold text-emerald-400">{balance}</span>
-      </div>
-    </div>
-  </div>
 </div>
-
 
       {/* Main Content Row */}
       <div className="flex flex-wrap p-2 gap-2">
@@ -1820,15 +1817,20 @@ useEffect(() => {
           <div className="flex gap-3 mt-6">
             <button
               type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
-                !canPrint ? "opacity-50 cursor-not-allowed" : ""
-              }`}
               onClick={handlePrint}
               disabled={!canPrint || isPrinting}
+              className={`
+                flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold
+                text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg
+                hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400
+                transition-all duration-300 hover:scale-105 active:scale-95
+                ${(!canPrint || isPrinting) ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}
+              `}
             >
               <Printer className="w-5 h-5" />
-              Print
+              {isPrinting ? "Printing..." : "Print"}
             </button>
+
 
             <button
               onClick={() => {

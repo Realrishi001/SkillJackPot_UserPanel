@@ -60,7 +60,7 @@ function SlotNumber({ value, delay = 0 }) {
       if (frame < 18) {
         setDisplay(Math.floor(Math.random() * 9000 + 1000));
         frame++;
-        setTimeout(animateRoll, 19 + Math.random() * 26);
+        setTimeout(animateRoll, 18 + Math.random() * 22);
       } else {
         setDisplay(value);
         setRolling(false);
@@ -72,13 +72,13 @@ function SlotNumber({ value, delay = 0 }) {
   return (
     <motion.div
       key={display}
-      initial={{ y: -40, opacity: 0.3, scale: 1.05 }}
-      animate={{ y: 0, opacity: 1, scale: rolling ? 1.08 : 1 }}
-      transition={{ type: "spring", stiffness: 400, damping: 40 }}
-      className="font-mono font-bold text-white text-[clamp(0.9rem,2.2vw,1.25rem)] tracking-wider select-none"
+      initial={{ y: -30, opacity: 0.3 }}
+      animate={{ y: 0, opacity: 1, scale: rolling ? 1.05 : 1 }}
+      transition={{ type: "spring", stiffness: 400, damping: 35 }}
+      className="font-mono font-bold text-white text-[clamp(0.7rem,2vw,1rem)] select-none"
       style={{
-        textShadow: isEmpty ? "none" : "0 2px 5px #0009",
-        opacity: isEmpty ? 0.25 : 1,
+        textShadow: isEmpty ? "none" : "0 1px 3px #0008",
+        opacity: isEmpty ? 0.3 : 1,
       }}
     >
       {display}
@@ -86,28 +86,26 @@ function SlotNumber({ value, delay = 0 }) {
   );
 }
 
-/* ---------- Slot Machine Box ---------- */
+/* ---------- Compact Slot Machine ---------- */
 function CasinoSlotMachine({ rows }) {
   return (
-    <div className="relative flex justify-center items-center    md:w-[100%] max-w-[1100px]">
+    <div className="w-full h-full flex items-center justify-center p-1">
       <div
-        className="rounded-2xl border-[3px] border-yellow-500 lg:w-[100%] sm:w-[90%] 
-                   shadow-[0_2px_25px_#000a,inset_0_0_20px_#ffd70020]
-                   bg-gradient-radial from-[#181e26] to-[#242328] p-3"
+        className="rounded-xl border-[2px] border-yellow-400 bg-gradient-to-br from-[#1a1a1a] to-[#252525]
+                   shadow-[0_2px_8px_#000a,inset_0_0_10px_#ffd70020] px-2 py-1 w-full max-w-full"
       >
-        <div className="flex flex-col gap-[6px] items-center justify-center">
+        <div className="flex flex-col gap-1 items-center justify-center w-full">
           {rows.map((row, i) => (
             <div
               key={i}
-              className="flex gap-[6px] justify-center flex-wrap sm:flex-nowrap"
+              className="flex gap-1 justify-center w-full flex-nowrap"
             >
               {row.map((num, j) => (
                 <div
                   key={j}
-                  className="flex justify-center items-center rounded-lg
-                             border-[2px] border-yellow-400 shadow-[0_0_10px_#ffd70040_inset]
-                             w-[clamp(50px,7vw,100px)] h-[clamp(32px,5vw,42px)] 
-                             sm:w-[clamp(40px,6vw,100px)] sm:h-[clamp(36px,5vw,42px)]
+                  className="flex justify-center items-center rounded
+                             border-[1.5px] border-yellow-400 shadow-inner
+                             w-full h-[clamp(20px,4vh,28px)] min-w-0 flex-1
                              overflow-hidden"
                   style={{
                     background: [
@@ -124,7 +122,7 @@ function CasinoSlotMachine({ rows }) {
                     ][j % 10],
                   }}
                 >
-                  <SlotNumber value={num} delay={i * 150 + j * 50} />
+                  <SlotNumber value={num} delay={i * 100 + j * 40} />
                 </div>
               ))}
             </div>
@@ -135,7 +133,7 @@ function CasinoSlotMachine({ rows }) {
   );
 }
 
-/* ---------- Main Component ---------- */
+/* ---------- Ultra Compact Main Layout ---------- */
 export default function ShowResult({ drawTime }) {
   const [ticketNumbers, setTicketNumbers] = useState([[], [], []]);
   const [gameId, setGameId] = useState("-");
@@ -178,23 +176,16 @@ export default function ShowResult({ drawTime }) {
   }, [drawTime, gameId]);
 
   return (
-    <div
-      className="flex flex-col md:flex-row justify-center md:justify-between items-center 
-                 w-full px-4 md:px-10 py-6 gap-6 md:gap-10
-                 md:space-x-6 lg:space-x-10"
-    >
-      {/* Left Logo */}
-      <div className="flex justify-center md:justify-end items-center w-full md:w-[20%]">
-        <img
-          src="/logo.png"
-          alt="Skill King"
-          className="w-[120px] sm:w-[140px] md:w-[160px] lg:w-[180px] h-auto 
-                     drop-shadow-[0_0_12px_#000a] transition-all duration-300"
-        />
+    <div className="w-full h-full flex items-center justify-center p-0">
+      <img
+            src="/logo.png"
+            alt="Skill Jackpot"
+            className="w-[140px] lg:w-[180px] h-auto 
+                       drop-shadow-[0_0_12px_#000000]"
+          />
+      <div className="w-full h-full flex items-center justify-center p-1">
+        <CasinoSlotMachine rows={ticketNumbers} />
       </div>
-
-      {/* Right Slot Box */}
-      <CasinoSlotMachine rows={ticketNumbers} />
     </div>
   );
 }
