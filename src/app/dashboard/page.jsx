@@ -780,6 +780,29 @@ export default function Page() {
   const inputRefs = useRef(
     Array.from({ length: 10 }, () => Array.from({ length: 10 }, () => null))
   );
+// ✅ Barcode Scanner Auto-Claim Hook
+useEffect(() => {
+  const inputEl = document.querySelector(
+    'input[placeholder="Transaction No/Bar Code"]'
+  );
+  if (!inputEl) return;
+
+  // Auto-focus the field when page loads
+  inputEl.focus();
+
+  const handleScanEnter = (e) => {
+    if (e.key === "Enter") {
+      const scannedValue = e.target.value.trim();
+      if (scannedValue) {
+        setTransactionInput(scannedValue);
+        handleClaimTicket(); // 🔁 uses your existing claim logic — DO NOT CHANGE
+      }
+    }
+  };
+
+  inputEl.addEventListener("keydown", handleScanEnter);
+  return () => inputEl.removeEventListener("keydown", handleScanEnter);
+}, []);
 
   useEffect(() => {
     setRemainSecs(getRemainTime()); // Set initial value
@@ -1301,7 +1324,8 @@ export default function Page() {
       .replace(/\D/g, "")
       .slice(-5)
       .padStart(5, "0");
-    const barcodeValue = `SJ${printableId5}`; // keep the "SJ" prefix
+    const barcodeValue = `${data.ticketNumber}`;
+
     // If you want only digits (no SJ), use:  const barcodeValue = printableId5;
 
     const canvas = document.createElement("canvas");
