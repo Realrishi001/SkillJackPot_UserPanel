@@ -1,0 +1,1054 @@
+{
+  "chapter": "Biomolecules",
+  "topics": [
+    {
+      "topic": "How to Analyse Chemical Composition?",
+      "questions": [
+        {
+          "number": 1,
+          "question": "The inorganic compounds like sulphate, phosphate, etc., are found in",
+          "options": {
+            "a": "acid-soluble pool",
+            "b": "acid-insoluble fraction",
+            "c": "both (a) and (b)",
+            "d": "none of these"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 2,
+          "question": "The total composition of acid-soluble and acid-insoluble fraction represents the entire composition of",
+          "options": {
+            "a": "dead cells",
+            "b": "gene pool",
+            "c": "biomolecules",
+            "d": "gene library"
+          },
+          "answer": "c"
+        },
+        {
+          "number": 3,
+          "question": "Biomolecules are",
+          "options": {
+            "a": "inorganic materials only",
+            "b": "organic materials only",
+            "c": "all the carbon compounds obtained from living tissues",
+            "d": "only DNA and RNA"
+          },
+          "answer": "c"
+        },
+        {
+          "number": 4,
+          "question": "Which of the following correctly identifies the structural formulae shown?",
+          "options": {
+            "a": "A: Fructose, B: Glucose",
+            "b": "A: Glucose, B: Ribose",
+            "c": "A: Ribose, B: Deoxyribose",
+            "d": "A: Glucose, B: Fructose"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 5,
+          "question": "Identify the amino acids given below.",
+          "options": {
+            "a": "Alanine and Glycine",
+            "b": "Glycine and Serine",
+            "c": "Serine and Alanine",
+            "d": "Glycine and Alanine"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 6,
+          "question": "The 20 different amino acids have different",
+          "options": {
+            "a": "R groups",
+            "b": "carboxylic groups",
+            "c": "peptide bonds",
+            "d": "amino groups"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 7,
+          "question": "Which of the following is a correct match?",
+          "options_table": {
+            "columns": ["Acidic aa", "Basic aa", "Neutral aa"],
+            "options": {
+              "a": ["Glutamic acid", "Lysine", "Valine"],
+              "b": ["Lysine", "Valine", "Glutamic acid"],
+              "c": ["Lysine", "Glutamic acid", "Valine"],
+              "d": ["Glutamic acid", "Valine", "Lysine"]
+            }
+          },
+          "answer": "a"
+        },
+        {
+          "number": 8,
+          "question": "Select the pair that consists of acidic amino acids.",
+          "options": {
+            "a": "Aspartic acid, Glutamic acid",
+            "b": "Lysine, Alanine",
+            "c": "Glycine, Alanine",
+            "d": "Glycine, Lysine"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 9,
+          "question": "An example of aromatic amino acid is",
+          "options": {
+            "a": "tryptophan",
+            "b": "tyrosine",
+            "c": "phenylalanine",
+            "d": "all of these"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 10,
+          "question": "Saturated fatty acids possess _______ bonds between carbon atoms.",
+          "options": {
+            "a": "single",
+            "b": "double",
+            "c": "triple",
+            "d": "both double and triple"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 11,
+          "question": "Triglycerides are fatty acids of glycerol where three OH groups are esterified with _______ molecules of fatty acids.",
+          "options": {
+            "a": "one, one",
+            "b": "one, three",
+            "c": "three, one",
+            "d": "two, one"
+          },
+          "answer": "c"
+        }
+      ]
+    },
+    {
+      "topic": "Primary and Secondary Metabolites",
+      "questions": [
+        {
+          "number": 25,
+          "question": "Match column I with column II and select the correct option.",
+          "options_table": {
+            "columns": ["Category", "Secondary Metabolites"],
+            "options": {
+              "a": ["Pigments", "Concanavalin A"],
+              "b": ["Terpenoids", "Monoterpenes, diterpenes"],
+              "c": ["Alkaloids", "Morphine, codeine"],
+              "d": ["Flavonoids", "Carotenoids, anthocyanins"]
+            }
+          },
+          "answer": "b"
+        },
+        {
+          "number": 26,
+          "question": "Which of the following secondary metabolites are used as drugs?",
+          "options": {
+            "a": "Atropine and ricin",
+            "b": "Vinblastin and curcumin",
+            "c": "Morphine and codeine",
+            "d": "Atropine and cellulose"
+          },
+          "answer": "c"
+        },
+        {
+          "number": 27,
+          "question": "Which of the following are alkaloids?",
+          "options": {
+            "a": "Codeine",
+            "b": "Morphine",
+            "c": "Both (a) and (b)",
+            "d": "None"
+          },
+          "answer": "c"
+        },
+        {
+          "number": 28,
+          "question": "Select the incorrect match.",
+          "options": {
+            "a": "Tannins - Antioxidants",
+            "b": "Lectins - Concanavalin A",
+            "c": "Drugs - Vinblastin",
+            "d": "Alkaloids - Anthocyanins"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 29,
+          "question": "Study the given statements and select the correct option.",
+          "options": {
+            "a": "Primary metabolites include proteins, nucleic acids and lipids",
+            "b": "Lignins, flavonoids, rubber are secondary metabolites",
+            "c": "Linoleic, linolenic, palmitic acids are fatty acids",
+            "d": "All are correct"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 30,
+          "question": "Which one is a secondary metabolite?",
+          "options": {
+            "a": "Lemon grass oil",
+            "b": "Rubber",
+            "c": "Cholesterol",
+            "d": "Concanavalin A"
+          },
+          "answer": "d"
+        }
+      ]
+    },
+    {
+      "topic": "Biomacromolecules",
+      "questions": [
+        {
+          "number": 31,
+          "question": "The correct order of chemical composition of living tissues/cells is",
+          "options": {
+            "a": "nucleic acids > proteins > H2O > carbohydrates > lipids > ions",
+            "b": "H2O > proteins > nucleic acids > carbohydrates > lipids > ions",
+            "c": "lipids > ions > carbohydrates > nucleic acids > proteins > H2O",
+            "d": "H2O > ions > carbohydrates > lipids > proteins > nucleic acids"
+          },
+          "answer": "b"
+        },
+        {
+          "number": 32,
+          "question": "Match the components with % of total cellular mass.",
+          "options_table": {
+            "columns": ["Component", "% of Mass"],
+            "options": {
+              "a": ["Ions", "1"],
+              "b": ["Carbohydrates", "3"],
+              "c": ["Nucleic acids", "5"],
+              "d": ["Proteins", "10-15"]
+            }
+          },
+          "answer": "b"
+        },
+        {
+          "number": 33,
+          "question": "Which organic compounds are acid-insoluble fraction?",
+          "options": {
+            "a": "Polysaccharides",
+            "b": "Nucleic acids",
+            "c": "Lipids",
+            "d": "All of these"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 34,
+          "question": "Which group of organic compounds is acid insoluble but MW < 800 Da?",
+          "options": {
+            "a": "Amino acids",
+            "b": "Nucleic acids",
+            "c": "Polysaccharides",
+            "d": "Lipids"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 35,
+          "question": "Select the incorrect match regarding composition.",
+          "options": {
+            "a": "Water – 70–90%",
+            "b": "Lipids – 3%",
+            "c": "Nucleic acids – 5%",
+            "d": "Proteins – 10–15%"
+          },
+          "answer": "b"
+        },
+        {
+          "number": 36,
+          "question": "Select the correct sorting for A and B in the flowchart.",
+          "options": {
+            "a": "A: Proteins, B: Nucleic acids",
+            "b": "A: Nucleic acids, B: Proteins",
+            "c": "A: Polysaccharides, B: Proteins",
+            "d": "A: Proteins, B: Polysaccharides"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 37,
+          "question": "If 1 g of tissue is homogenized using TCA and filtered, the acid-soluble fraction has compounds of MW < 800 Da while acid-insoluble fraction has macromolecules like",
+          "options": {
+            "a": "proteins, polysaccharides, nucleic acids, lipids",
+            "b": "amino acids, fatty acids, sugars",
+            "c": "flavonoids and alkaloids",
+            "d": "cellulose and starch"
+          },
+          "answer": "a"
+        }
+      ]
+    },
+    {
+      "topic": "Proteins",
+      "questions": [
+        {
+          "number": 38,
+          "question": "Match column I with column II and select the correct option.",
+          "options_table": {
+            "columns": ["Column I", "Column II"],
+            "options": {
+              "a": ["Collagen", "Intercellular ground substance"],
+              "b": ["Insulin", "Hormone"],
+              "c": ["Keratin", "Fibre protein"],
+              "d": ["Histones", "Basic proteins"]
+            }
+          },
+          "answer": "a"
+        },
+        {
+          "number": 39,
+          "question": "Select the correct match.",
+          "options": {
+            "a": "Collagen – Most abundant protein in animal world",
+            "b": "RUBISCO – Most abundant in biosphere",
+            "c": "Keratin – Collagen protein",
+            "d": "Both (a) and (b)"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 40,
+          "question": "What will be the molecular formula of a tripeptide formed by glycine, alanine and serine?",
+          "options": {
+            "a": "C9H18O8N2",
+            "b": "C9H17O6N3",
+            "c": "C9H16O7N3",
+            "d": "C9H17O6N2"
+          },
+          "answer": "b"
+        },
+        {
+          "number": 41,
+          "question": "Which one of the following is not a protein?",
+          "options": {
+            "a": "Collagen",
+            "b": "Trypsin",
+            "c": "Insulin",
+            "d": "Antibody"
+          },
+          "answer": "b"
+        },
+        {
+          "number": 47,
+          "question": "Read the statements and select the correct option. Right end of polysaccharide chain is called reducing end while left end is called non-reducing end.",
+          "options": {
+            "a": "True",
+            "b": "False"
+          },
+          "answer": "a"
+        }
+      ]
+    },
+    {
+      "topic": "Polysaccharides",
+      "questions": [
+        {
+          "number": 42,
+          "question": "The polysaccharides made of glucose monomers are mainly storage materials or structural components. Which one is storage?",
+          "options": {
+            "a": "Cellulose",
+            "b": "Inulin",
+            "c": "Chitin",
+            "d": "Pectin"
+          },
+          "answer": "b"
+        },
+        {
+          "number": 43,
+          "question": "Which of the following statements is incorrect?",
+          "options": {
+            "a": "Cellulose and chitin are structural polysaccharides",
+            "b": "Glycogen is a storage polysaccharide",
+            "c": "Starch is a homopolysaccharide",
+            "d": "All polysaccharides have nitrogen"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 44,
+          "question": "Name the nitrogenous polysaccharide found in fungal cell wall.",
+          "options": {
+            "a": "Chitin",
+            "b": "Pectin",
+            "c": "Cellulose",
+            "d": "Agarose"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 45,
+          "question": "Which polysaccharide is branched and water-insoluble?",
+          "options": {
+            "a": "Glycogen",
+            "b": "Starch",
+            "c": "Cellulose",
+            "d": "Chitin"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 46,
+          "question": "Cell wall in fungi has chitin and that in plant has cellulose, both being non-reducing. Identify reason.",
+          "options": {
+            "a": "Absence of free aldehyde groups",
+            "b": "Presence of glycosidic bonds",
+            "c": "Presence of nitrogen",
+            "d": "Absence of oxygen bridges"
+          },
+          "answer": "a"
+        }
+      ]
+    },
+    {
+      "topic": "Nucleic Acids",
+      "questions": [
+        {
+          "number": 51,
+          "question": "Purines have nitrogen atoms at ______ positions.",
+          "options": {
+            "a": "1, 3, 7, 9",
+            "b": "1, 2, 4, 6",
+            "c": "3, 5, 7, 8",
+            "d": "1, 4, 5, 8"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 52,
+          "question": "Pyrimidines have nitrogen atoms at ______ positions.",
+          "options": {
+            "a": "1, 3",
+            "b": "1, 3, 7, 9",
+            "c": "3, 5, 7, 8",
+            "d": "1, 2, 4, 6"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 53,
+          "question": "Which of the following is an incorrect match?",
+          "options": {
+            "a": "Purines – Adenine, guanine",
+            "b": "Pyrimidines – Cytosine, thymine",
+            "c": "Storage polysaccharides – Glycogen",
+            "d": "Structural polysaccharides – Rubber"
+          },
+          "answer": "d"
+        },
+        {
+          "number": 54,
+          "question": "The three chemically distinct components of a nucleotide are",
+          "options": {
+            "a": "Nitrogen base, monosaccharide, phosphoric acid",
+            "b": "Nitrogen base, disaccharide, phosphoric acid",
+            "c": "Nitrogen base, sulphuric acid, monosaccharide",
+            "d": "Monosaccharide, sulphuric acid, phosphoric acid"
+          },
+          "answer": "a"
+        },
+        {
+          "number": 55,
+          "question": "Which of the following is correct group of pyrimidine bases?",
+          "options": {
+            "a": "Adenine and cytosine",
+            "b": "Guanine and uracil",
+            "c": "Uracil and cytosine",
+            "d": "Guanine and thymine"
+          },
+          "answer": "c"
+        }
+      ]
+    },
+   {
+  "topic": "Structure of Proteins",
+  "questions": [
+    {
+      "number": 56,
+      "question": "Identify X and Y in the given sequence.",
+      "options": {
+        "a": "N-terminal amino acid and C-terminal amino acid",
+        "b": "C-terminal amino acid and N-terminal amino acid",
+        "c": "Central amino acid and C-terminal amino acid",
+        "d": "Central amino acid and N-terminal amino acid"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 57,
+      "question": "At some points a protein chain may be folded back on itself like a hollow coil. This folding is held in place by which type of bonds or forces?",
+      "options": {
+        "a": "H-bonds",
+        "b": "Peptide bonds",
+        "c": "Hydrophobic interactions",
+        "d": "Disulphide bonds"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 58,
+      "question": "An α-helix is an example of which type of protein structure?",
+      "options": {
+        "a": "Primary",
+        "b": "Secondary",
+        "c": "Tertiary",
+        "d": "Quaternary"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 59,
+      "question": "A helical arrangement in a polypeptide chain is an example of",
+      "options": {
+        "a": "Primary structure",
+        "b": "Secondary structure",
+        "c": "Tertiary structure",
+        "d": "Quaternary structure"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 60,
+      "question": "Refer to the given figure. Formation of structures A and B could be due to",
+      "options": {
+        "a": "Formation of peptide bonds",
+        "b": "Linking of two polypeptides",
+        "c": "Formation of hydrogen bonds",
+        "d": "Formation of peptide bonds"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 61,
+      "question": "Recognise the figure and find out the correct matching.",
+      "options": {
+        "a": "Primary structure, Secondary structure",
+        "b": "Secondary structure, β-primary structure",
+        "c": "Secondary structure, β-tertiary structure",
+        "d": "Tertiary structure, Quaternary structure"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 62,
+      "question": "Adult human haemoglobin consists of",
+      "options": {
+        "a": "2 subunits (2α, 2β)",
+        "b": "4 subunits (2α, 2β)",
+        "c": "3 subunits (2α, 1β)",
+        "d": "2 subunits (1α, 1β)"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 63,
+      "question": "Read the given statements and select the correct option.\nStatement I: Haemoglobin is an example of quaternary structure of protein.\nStatement II: A quaternary protein molecule is composed of two or more polypeptide chains—two α-chains and two β-chains.",
+      "options": {
+        "a": "Statement I correct but II incorrect",
+        "b": "Statement I incorrect but II correct",
+        "c": "Both I and II correct",
+        "d": "Both I and II incorrect"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 64,
+      "question": "Keratin present in hair shows secondary structure known as",
+      "options": {
+        "a": "Parallel β-sheet",
+        "b": "Antiparallel β-sheet",
+        "c": "α-helix",
+        "d": "None of these"
+      },
+      "answer": "c"
+    }
+  ]
+},
+{
+  "topic": "Nature of Bond Linking Monomers in a Polymer",
+  "questions": [
+    {
+      "number": 65,
+      "question": "Select the option that correctly identifies the chemical bonds present in the given biomolecules.",
+      "options_table": {
+        "columns": ["Biomolecule", "Bond type"],
+        "options": {
+          "A": ["Polysaccharides", "Glycosidic bond"],
+          "B": ["Proteins", "Peptide bond"],
+          "C": ["Fats", "Ester bond"],
+          "D": ["Water", "Hydrogen bond"]
+        }
+      },
+      "answer": "a"
+    },
+    {
+      "number": 66,
+      "question": "What does A represent in the given diagram of a nucleotide?",
+      "options": {
+        "a": "Glycosidic bond",
+        "b": "Phosphate bond",
+        "c": "Ester bond",
+        "d": "Peptide bond"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 67,
+      "question": "Which bonds are indicated by X and Y in the given diagram?",
+      "options": {
+        "a": "Glycosidic bond and Hydrogen bond",
+        "b": "Phosphate bond and Hydrogen bond",
+        "c": "Phosphodiester bond and Glycosidic bond",
+        "d": "Phosphodiester bond and Hydrogen bond"
+      },
+      "answer": "d"
+    },
+    {
+      "number": 68,
+      "question": "Primary structure of proteins is due to the presence of",
+      "options": {
+        "a": "Peptide bonds",
+        "b": "Disulphide (-S–S-) linkages",
+        "c": "Ionic bonds",
+        "d": "Hydrogen bonds"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 69,
+      "question": "Which of the two groups of the given formula is involved in peptide bond formation between different amino acids?",
+      "options": {
+        "a": "2 and 3",
+        "b": "1 and 4",
+        "c": "1 and 3",
+        "d": "3 and 4"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 70,
+      "question": "B-DNA, which is right-handed double helix, contains how many base pairs per turn of the helix and each turn is about how much length?",
+      "options": {
+        "a": "10 base pairs per turn, 3.4 Å",
+        "b": "10 base pairs per turn, 34 Å",
+        "c": "20 base pairs per turn, 3.4 Å",
+        "d": "20 base pairs per turn, 34 Å"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 71,
+      "question": "Read the given statement and select the option that correctly matches the following.\nIn a glycogen molecule, successive glucose units are linked together by",
+      "options": {
+        "a": "α-1,4-glycosidic bonds in straight chain and α-1,6-glycosidic bonds at branch points",
+        "b": "β-1,4-glycosidic bonds in straight chain and β-1,6-glycosidic bonds at branch points",
+        "c": "α-1,4-glycosidic bonds in straight chain only",
+        "d": "β-1,4-glycosidic bonds in straight chain only"
+      },
+      "answer": "a"
+    }
+  ]
+  },
+
+{
+    "topic": "Dynamic State of Body Constituents – Concept of Metabolism",
+    "questions": [
+      {
+        "number": 72,
+        "question": "Read the following statements and select the correct option.\nStatement 1: All biomolecules have a ‘turn over’.\nStatement 2: One type of biomolecule changes into some other type of biomolecule.",
+        "options": {
+          "a": "Statement 1 is correct but Statement 2 is incorrect",
+          "b": "Statement 1 is incorrect but Statement 2 is correct",
+          "c": "Both Statements 1 and 2 are incorrect",
+          "d": "Both Statements 1 and 2 are correct"
+        },
+        "answer": "a"
+      },
+      {
+        "number": 73,
+        "question": "The proteins which hasten the rate of a given metabolic conversion are called",
+        "options": {
+          "a": "haemoglobin",
+          "b": "metabolites",
+          "c": "enzymes",
+          "d": "none of these"
+        },
+        "answer": "c"
+      },
+      {
+        "number": 74,
+        "question": "Which of the following is an example of metabolic transformation?",
+        "options": {
+          "a": "Formation of CO₂ from amino group",
+          "b": "Breaking of amino group in a nucleotide base",
+          "c": "Formation of glycosidic bond in a disaccharide",
+          "d": "All of these"
+        },
+        "answer": "c"
+      },
+      {
+        "number": 75,
+        "question": "The catalysts which hasten the rate of a metabolic conversion are",
+        "options": {
+          "a": "protein",
+          "b": "polysaccharide",
+          "c": "fatty acid",
+          "d": "lipid"
+        },
+        "answer": "a"
+      },
+      {
+        "number": 76,
+        "question": "Select the incorrect statement.",
+        "options": {
+          "a": "Metabolic pathways are linear only",
+          "b": "Flow of metabolites is an unidirectional reaction in living organisms",
+          "c": "Flow of metabolites through metabolic pathway is cyclic",
+          "d": "Most of the metabolic reactions are physical reactions"
+        },
+        "answer": "a"
+      }
+    ]
+  },
+  {
+    "topic": "Metabolic Basis for Living",
+    "questions": [
+      {
+        "number": 77,
+        "question": "The most important form of energy currency in living systems is stored in the form of a chemical called",
+        "options": {
+          "a": "ATP",
+          "b": "Amino acid",
+          "c": "GTP",
+          "d": "GLUT 4"
+        },
+        "answer": "a"
+      },
+      {
+        "number": 78,
+        "question": "Select the correct statement regarding metabolic pathway.",
+        "options": {
+          "a": "It is a catabolic process and requires energy input",
+          "b": "It is an anabolic process and energy releasing",
+          "c": "It is a catabolic process and energy releasing",
+          "d": "It is an anabolic process and energy consuming"
+        },
+        "answer": "c"
+      },
+      {
+        "number": 79,
+        "question": "Glucose becomes lactic acid in our skeletal muscles is an example of",
+        "options": {
+          "a": "biosynthetic pathway",
+          "b": "catabolic pathway",
+          "c": "anabolic pathway",
+          "d": "energy consuming process"
+        },
+        "answer": "b"
+      },
+      {
+        "number": 80,
+        "question": "Anabolic pathway in metabolism are (i) pathway and (ii) energy __________ process.",
+        "options": {
+          "a": "(i) biosynthetic, (ii) releasing",
+          "b": "(i) biosynthetic, (ii) consuming",
+          "c": "(i) hydrolysing, (ii) releasing",
+          "d": "(i) biodegrading, (ii) release"
+        },
+        "answer": "b"
+      },
+      {
+        "number": 81,
+        "question": "Which of the following processes requires energy input?",
+        "options": {
+          "a": "Assembly of a protein from amino acids",
+          "b": "Formation of fatty acids from acetic acid",
+          "c": "Formation of lactic acid from glucose",
+          "d": "Both (a) and (b)"
+        },
+        "answer": "d"
+      }
+    ]
+  },
+  {
+    "topic": "The Living State",
+    "questions": [
+      {
+        "number": 82,
+        "question": "The blood concentration of glucose in a normal healthy individual is",
+        "options": {
+          "a": "6.1 mmol/L – 10.2 mmol/L",
+          "b": "4.2 mmol/L – 5.6 mmol/L",
+          "c": "4.2 mmol/L – 6.6 mmol/L",
+          "d": "12.8 mmol/L – 20.1 mmol/L"
+        },
+        "answer": "b"
+      },
+      {
+        "number": 83,
+        "question": "The living state is a __________ state to be able to perform work.",
+        "options": {
+          "a": "non-equilibrium steady",
+          "b": "equilibrium steady",
+          "c": "non-equilibrium unsteady",
+          "d": "equilibrium unsteady"
+        },
+        "answer": "a"
+      },
+      {
+        "number": 84,
+        "question": "The blood concentration of hormone in a normal healthy individual should be measured in",
+        "options": {
+          "a": "grams/mL",
+          "b": "milligrams/mL",
+          "c": "micrograms/mL",
+          "d": "nanograms/mL"
+        },
+        "answer": "d"
+      },
+      {
+        "number": 85,
+        "question": "Living process is a constant effort to prevent falling into the state of maximum entropy. This is achieved by energy __________.",
+        "options": {
+          "a": "gain and utilization",
+          "b": "release and storage",
+          "c": "loss and dissipation",
+          "d": "conversion and stability"
+        },
+        "answer": "a"
+      },
+      {
+        "number": 86,
+        "question": "Select the incorrect statement.\n(a) Living organisms exist in a steady state.\n(b) This steady state is a non-equilibrium steady state.\n(c) The living state is a constant effort to prevent entropy.\n(d) Without metabolism, there cannot be a living state.",
+        "options": {
+          "a": "(a)",
+          "b": "(b)",
+          "c": "(c)",
+          "d": "(d)"
+        },
+        "answer": "a"
+      }
+    ]
+  },
+  {
+  "topic": "Enzymes",
+  "questions": [
+    {
+      "number": 87,
+      "question": "Enzymes catalyse the biochemical reactions by",
+      "options": {
+        "a": "lowering the activation energy",
+        "b": "increasing the activation energy",
+        "c": "either (a) or (b)",
+        "d": "none of these"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 88,
+      "question": "Which of the following statements about enzymes are correct?",
+      "options": {
+        "a": "Enzymes do not alter the overall change in free energy",
+        "b": "Enzymes alter three-dimensional shape of the substrate to enable reaction",
+        "c": "Enzymes keep their functions even at high temperature",
+        "d": "Enzymes are highly specific for reactions"
+      },
+      "answer": "d"
+    },
+    {
+      "number": 89,
+      "question": "Read the given statements and select the correct option.\nStatement 1: Ribozymes are RNA molecules which catalyse the synthesis of certain specific RNAs and polypeptides.\nStatement 2: Ribozymes are proteinaceous enzymes.",
+      "options": {
+        "a": "Statement 1 and 2 correct",
+        "b": "Statement 1 correct but Statement 2 incorrect",
+        "c": "Statement 1 incorrect but Statement 2 correct",
+        "d": "Both statements incorrect"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 91,
+      "question": "Which of the following statements is incorrect regarding enzyme activity?",
+      "options": {
+        "a": "It increases with increase in substrate concentration up to saturation point",
+        "b": "It is highest at optimum pH value",
+        "c": "It initially decreases with increase in pH",
+        "d": "It initially increases with increase in temperature and then decreases"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 92,
+      "question": "Read the given statements and select the correct option.\nStatement 1: Low temperature destroys enzymes, high temperature preserves enzyme function.\nStatement 2: Enzymes function best within a specific temperature range.",
+      "options": {
+        "a": "Statement 1 and 2 are correct",
+        "b": "Statement 1 incorrect but Statement 2 correct",
+        "c": "Statement 1 correct but Statement 2 incorrect",
+        "d": "Both statements 1 and 2 incorrect"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 97,
+      "question": "Enzymes are most functional within the temperature range of",
+      "options": {
+        "a": "10°–80°C",
+        "b": "15°–25°C",
+        "c": "25°–40°C",
+        "d": "50°–60°C"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 98,
+      "question": "The inhibitor which closely resembles the substrate in molecular structure and inhibits the enzyme activity by binding to the active site of enzyme is called",
+      "options": {
+        "a": "non-competitive inhibitor",
+        "b": "competitive inhibitor",
+        "c": "feedback inhibitor",
+        "d": "negative inhibitor"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 99,
+      "question": "Inhibition of succinate dehydrogenase by malonate is an example of",
+      "options": {
+        "a": "competitive inhibition",
+        "b": "non-competitive inhibition",
+        "c": "substrate inhibition",
+        "d": "negative feedback"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 100,
+      "question": "The inhibitor which does not resemble the substrate in structure and binds to the enzyme at a site other than the active site is called",
+      "options": {
+        "a": "competitive inhibitor",
+        "b": "non-competitive inhibitor",
+        "c": "allosteric inhibitor",
+        "d": "structural analogue"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 101,
+      "question": "Feedback inhibition of an enzyme is influenced by",
+      "options": {
+        "a": "enzyme itself",
+        "b": "external factors",
+        "c": "end product",
+        "d": "substrate"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 102,
+      "question": "Refer to the given reaction:\nC6H12O6 + O2 + H2O → 2C6H12O6 (Glucose → Pyruvate)\nEnzyme A used in the reaction belongs to which class of enzymes?",
+      "options": {
+        "a": "Dehydrogenases",
+        "b": "Transferases",
+        "c": "Hydrolases",
+        "d": "Lyases"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 103,
+      "question": "Enzymes that catalyse removal of groups from substrates by means other than hydrolysis, and addition of groups to double bonds are called",
+      "options": {
+        "a": "Ligases",
+        "b": "Isomerases",
+        "c": "Lyases",
+        "d": "Hydrolases"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 104,
+      "question": "Dihydroxyacetone phosphate and glyceraldehyde-3-phosphate are interconvertible by isomerases. This reaction belongs to the category of",
+      "options": {
+        "a": "Isomerases",
+        "b": "Ligases",
+        "c": "Lyases",
+        "d": "Hydrolases"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 105,
+      "question": "Which of the following is an example of isozyme?",
+      "options": {
+        "a": "Catalase",
+        "b": "Amylase",
+        "c": "Lactate dehydrogenase",
+        "d": "Glucosidase"
+      },
+      "answer": "c"
+    },
+    {
+      "number": 106,
+      "question": "Holoenzyme is the complete enzyme consisting of an apoenzyme and a co-factor. Select the option that correctly identifies the nature of apoenzyme and co-factor.",
+      "options_table": {
+        "columns": ["Apoenzyme", "Co-factor"],
+        "options": {
+          "a": ["Non-protein", "Non-protein"],
+          "b": ["Non-protein", "Protein"],
+          "c": ["Protein", "Non-protein"],
+          "d": ["Protein", "Protein"]
+        }
+      },
+      "answer": "c"
+    },
+    {
+      "number": 107,
+      "question": "Read the given paragraph carefully and fill in the blanks.\nSome co-factors are inorganic while others are organic. Organic co-factors are further distinguished into coenzymes and prosthetic groups. The former are loosely bound to the apoenzyme and the latter are tightly bound. The metal ions like Zn²⁺, Fe²⁺, Cu²⁺ are examples of _______. The organic co-factors such as NAD⁺ or NADP⁺ are called _______. The tightly bound co-factors are known as _______.",
+      "options": {
+        "a": "(i) co-factors, (ii) coenzymes, (iii) prosthetic groups",
+        "b": "(i) prosthetic groups, (ii) co-factors, (iii) coenzymes",
+        "c": "(i) coenzymes, (ii) co-factors, (iii) prosthetic groups",
+        "d": "(i) co-factors, (ii) prosthetic groups, (iii) coenzymes"
+      },
+      "answer": "a"
+    },
+    {
+      "number": 108,
+      "question": "Coenzyme NAD or NADP contains which vitamin?",
+      "options": {
+        "a": "Riboflavin",
+        "b": "Niacin",
+        "c": "Pyridoxine",
+        "d": "Thiamine"
+      },
+      "answer": "b"
+    },
+    {
+      "number": 109,
+      "question": "Zinc is a co-factor for which of the following enzymes?",
+      "options": {
+        "a": "Trypsin",
+        "b": "Pepsin",
+        "c": "Carboxypeptidase",
+        "d": "Amylase"
+      },
+      "answer": "c"
+    }
+  ]
+}
+
+
+
+
+  ]
+}
