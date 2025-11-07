@@ -1,3 +1,13 @@
+
+"use client";
+import React, { useState, useEffect } from "react";
+import { Search, XCircle, Trash2, Home } from "lucide-react";
+import Navbar from "../../Components/Navbar/Navbar.jsx";
+import Link from "next/link";
+import axios from "axios";
+
+const getUserToken = () => localStorage.getItem("userToken");
+const entryOptions = [10, 20, 50, 100];
 function getLoginIdFromToken() {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("userToken");
@@ -12,16 +22,6 @@ function getLoginIdFromToken() {
   }
   return null;
 }
-
-"use client";
-import React, { useState, useEffect } from "react";
-import { Search, XCircle, Trash2, Home } from "lucide-react";
-import Navbar from "../../Components/Navbar/Navbar.jsx";
-import Link from "next/link";
-import axios from "axios";
-
-const getUserToken = () => localStorage.getItem("userToken");
-const entryOptions = [10, 20, 50, 100];
 
 export default function Page() {
   const [tickets, setTickets] = useState([]);
