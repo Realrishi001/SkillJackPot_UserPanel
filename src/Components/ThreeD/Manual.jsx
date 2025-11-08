@@ -168,7 +168,7 @@ export default function Manual() {
       // 1️⃣ Get loginId from JWT
       const token = localStorage.getItem("userToken");
       if (!token) {
-        alert("User not logged in!");
+        toast.error("User not logged in!");
         return;
       }
       const decoded = jwtDecode(token);
@@ -190,7 +190,7 @@ export default function Manual() {
       });
 
       if (ticketNumbers.length === 0) {
-        alert("No valid tickets selected!");
+        toast.error("No valid tickets selected!");
         return;
       }
 
@@ -208,13 +208,13 @@ export default function Manual() {
 
       // 4️⃣ Send to backend
       const res = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/create-threed`, payload);
-      alert(res.data.message || "Tickets saved successfully!");
+      toast.error(res.data.message || "Tickets saved successfully!");
 
       // 5️⃣ Reset
       handleReset();
     } catch (err) {
       console.error("Error saving tickets:", err);
-      alert("Error saving tickets. Please try again.");
+      toast.error("Error saving tickets. Please try again.");
     }
   };
 

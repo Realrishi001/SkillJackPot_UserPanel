@@ -178,7 +178,7 @@ export default function ShowResult({ drawTime }) {
   return (
     <div className="w-full h-full flex items-center justify-center p-0">
       <img
-            src="/logo.png"
+            src="/Logo.png"
             alt="Skill Jackpot"
             draggable="false"
             className="w-[140px] lg:w-[180px] h-auto 

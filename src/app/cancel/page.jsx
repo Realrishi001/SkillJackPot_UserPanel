@@ -5,6 +5,7 @@ import { Search, XCircle, Trash2, Home } from "lucide-react";
 import Navbar from "../../Components/Navbar/Navbar.jsx";
 import Link from "next/link";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const getUserToken = () => localStorage.getItem("userToken");
 const entryOptions = [10, 20, 50, 100];
@@ -90,7 +91,7 @@ export default function Page() {
       );
       setTickets((prev) => prev.filter((row) => row.ticketNo !== ticketNo));
     } catch (error) {
-      alert("Failed to cancel ticket. Please try again.");
+      toast.error("Failed to cancel ticket. Please try again.");
     } finally {
       setLoading(false);
     }
