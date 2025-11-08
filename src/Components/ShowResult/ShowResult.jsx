@@ -180,6 +180,7 @@ export default function ShowResult({ drawTime }) {
       <img
             src="/logo.png"
             alt="Skill Jackpot"
+            draggable="false"
             className="w-[140px] lg:w-[180px] h-auto 
                        drop-shadow-[0_0_12px_#000000]"
           />

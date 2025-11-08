@@ -19,7 +19,9 @@ import { DRAW_TIMES } from "../../data/drawTimes";
 import jsPDF from "jspdf";
 import JsBarcode from "jsbarcode";
 import AdvanceDrawModal from "../../Components/AdvanceDrawModal/AdvanceDrawModal.jsx";
+import TicketStatusModal from '../../Components/TicketStatusModal/TicketStatusModal.jsx'
 import { useRouter } from "next/navigation.js";
+
 
 // Helper for number ranges
 const range = (start, end) =>
@@ -148,6 +150,11 @@ export default function Page() {
   const [balance, setBalance] = useState("-");
 
   const isPrintingRef = useRef(false);
+
+  const [ticketStatusModalOpen, setTicketStatusModalOpen] = useState(false);
+  const [ticketStatusData, setTicketStatusData] = useState(null);
+  const [isClaimable, setIsClaimable] = useState(false);
+
 
   // Constant Quantity and Points for demo (change values as needed)
   const [quantities, setQuantities] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -565,6 +572,57 @@ export default function Page() {
     }
   };
 
+const handleCheckTicketStatus = async (ticketNumber) => {
+  try {
+    const res = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/is-claim-tickets`,
+      { ticketId: ticketNumber.trim() }
+    );
+
+    // ✅ Handle "Ticket not found" (backend returns 404)
+    if (res.status === 404 || res.data?.message === "Ticket not found") {
+      alert("⚠️ Wrong Ticket ID — No such ticket found.");
+      setTicketStatusData({ notFound: true });
+      setIsClaimable(false);
+      setTicketStatusModalOpen(true);
+      return;
+    }
+
+    // ✅ Normal success flow
+    if (res.data && res.data.status === "success") {
+      const data = res.data.ticket || {};
+      setTicketStatusData({
+        ticketNumber: data.ticketNumber,
+        drawTime: data.drawTime,
+        prizeAmount: data.prizeAmount,
+        isWinner: data.isWinner,
+        isClaimed: data.isClaimed,
+      });
+
+      setIsClaimable(data.isWinner && !data.isClaimed);
+      setTicketStatusModalOpen(true);
+    } else {
+      // ❌ Not a winning ticket
+      setTicketStatusData({ isWinner: false });
+      setIsClaimable(false);
+      setTicketStatusModalOpen(true);
+    }
+  } catch (error) {
+    // ✅ Handle backend 404 from Axios error
+    if (error.response && error.response.status === 404) {
+      // alert("⚠️ Wrong Ticket ID — No such ticket found.");
+      setTicketStatusData({ notFound: true });
+      setIsClaimable(false);
+      setTicketStatusModalOpen(true);
+      return;
+    }
+
+    console.error("Error checking ticket:", error);
+    alert("Failed to check ticket status. Please try again.");
+  }
+};
+
+
   const handleClaimTicket = async () => {
     try {
       const res = await axios.post(
@@ -794,7 +852,6 @@ useEffect(() => {
   );
   if (!inputEl) return;
 
-  // Auto-focus the field when page loads
   inputEl.focus();
 
   const handleScanEnter = (e) => {
@@ -802,7 +859,7 @@ useEffect(() => {
       const scannedValue = e.target.value.trim();
       if (scannedValue) {
         setTransactionInput(scannedValue);
-        handleClaimTicket(); // 🔁 uses your existing claim logic — DO NOT CHANGE
+        handleCheckTicketStatus(scannedValue); // ✅ new: check status first
       }
     }
   };
@@ -810,6 +867,7 @@ useEffect(() => {
   inputEl.addEventListener("keydown", handleScanEnter);
   return () => inputEl.removeEventListener("keydown", handleScanEnter);
 }, []);
+
 
   useEffect(() => {
     setRemainSecs(getRemainTime()); // Set initial value
@@ -1491,9 +1549,7 @@ const handlePrint = async () => {
   }
 };
 
-// Track refreshKey changes
 useEffect(() => {
-  // console.log("Refresh Key updated:", refreshKey);
 }, [refreshKey]); // This will log the updated value of refreshKey
 
   // Calculate total value (sum of all input boxes)
@@ -1502,11 +1558,6 @@ useEffect(() => {
     const num = parseInt(v, 10);
     if (!isNaN(num)) totalValue += num;
   });
-
-  // Calculate updatedQuantity array
-  // const updatedQuantity = quantities.map((q) => totalValue * q);
-
-  // const updatedPoints = updatedQuantity.map((q) => q * 2);
 
   const totalUpdatedQuantity = updatedQuantity.reduce(
     (sum, val) => sum + val,
@@ -1537,13 +1588,7 @@ useEffect(() => {
   const isEvenIndex = (row, col) => (row * 10 + col) % 2 === 0;
 
   useEffect(() => {
-    // console.log("activeTypeFilter:", activeTypeFilter);
-    // console.log(
-    //   "activeCheckbox:",
-    //   activeCheckbox,
-    //   "activeColGroup:",
-    //   activeColGroup
-    // );
+
   }, [activeTypeFilter, activeCheckbox, activeColGroup]);
 
   function isCellDisabled(row, col) {
@@ -1580,7 +1625,7 @@ useEffect(() => {
 
   {/* LEFT: Number Filters */}
   <div className="w-full lg:w-auto flex flex-col gap-3">
-    <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+    <div className="flex flex-wrap gap-2 justify-center text-sm  lg:justify-start">
       {[
         { label: "All", value: "all", activeClass: "from-purple-600 to-pink-600" },
         { label: "Even", value: "even", activeClass: "from-blue-600 to-indigo-600" },
@@ -1604,7 +1649,7 @@ useEffect(() => {
               setActiveColGroup(btn.label.toUpperCase());
             }
           }}
-          className={`px-4 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+          className={`px-1 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
             activeTypeFilter === btn.value
               ? `text-white bg-gradient-to-r ${btn.activeClass} shadow-lg`
               : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
@@ -1623,7 +1668,7 @@ useEffect(() => {
             setActiveFPSetIndex(null);
           }
         }}
-        className={`px-4 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+        className={`px-2 py-1 text-sm rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
           isFPMode
             ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
             : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
@@ -2294,10 +2339,10 @@ useEffect(() => {
             </div>
             <div className="flex-none flex gap-2">
               <button
-                className="flex items-center gap-3 px-6 rounded-sm font-bold h-10  text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={!transactionInput.trim()}
-                onClick={handleClaimTicket}
-              >
+  className="flex items-center gap-3 px-6 rounded-sm font-bold h-10 text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
+  disabled={!isClaimable}
+  onClick={handleClaimTicket}
+>
                 <TrendingUp className="w-5 h-5" />
                 Claim Ticket
               </button>
@@ -2345,6 +2390,12 @@ useEffect(() => {
       `}</style>
 
       <div>
+        <TicketStatusModal
+          open={ticketStatusModalOpen}
+          onClose={() => setTicketStatusModalOpen(false)}
+          statusData={ticketStatusData}
+        />
+
         <Navbar />
       </div>
     </div>

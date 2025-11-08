@@ -60,14 +60,14 @@ const Login = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <div className="relative min-h-screen select-none bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
       {/* Centered content */}
       <div className="relative z-20 flex items-center justify-center min-h-screen p-4">
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl max-w-md w-full transform transition-all duration-300 hover:scale-105">
           {/* Logo section */}
           <div className="text-center mb-8">
             <div className="bg-gradient-to-r from-purple-400 to-pink-400 p-3 rounded-2xl inline-block mb-4">
-              <Image src="/Logo.png" alt="Logo" className='filter brightness-95 w-fit m-auto' width={190} height={80} />
+              <Image src="/Logo.png" alt="Logo" draggable="false" className='filter brightness-95 w-fit m-auto' width={190} height={80} />
             </div>
           </div>
 
