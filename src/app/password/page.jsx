@@ -1,11 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Eye, EyeOff, Lock, User, Home} from "lucide-react";
+import { Eye, EyeOff, Lock, User, Home } from "lucide-react";
 import Navbar from "../../Components/Navbar/Navbar";
 import Link from "next/link";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
-  const [userId, setUserId] = useState("");
+  const [userName, setUserName] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -15,20 +17,30 @@ export default function Page() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [message, setMessage] = useState({ type: "", text: "" });
+  const router = useRouter();
 
-    useEffect(() => {
-      if (!localStorage.getItem("userToken")) {
-        router.push("/");
-      }
-    }, []);
+  useEffect(() => {
+    // Redirect if not logged in
+    if (!localStorage.getItem("userToken")) {
+      router.push("/");
+      return;
+    }
 
-  // Dummy submit handler (replace with real logic)
-  const handleSubmit = (e) => {
+    // Decode username from token (JWT)
+    try {
+      const token = localStorage.getItem("userToken");
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setUserName(payload?.userName || "");
+    } catch (e) {
+      console.error("Error decoding token:", e);
+    }
+  }, [router]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ type: "", text: "" });
 
-    // Basic checks (replace with real validation as needed)
-    if (!userId || !oldPassword || !newPassword || !confirm) {
+    if (!userName || !oldPassword || !newPassword || !confirm) {
       setMessage({ type: "error", text: "Please fill in all fields." });
       return;
     }
@@ -37,53 +49,83 @@ export default function Page() {
       return;
     }
     if (newPassword.length < 6) {
-      setMessage({ type: "error", text: "New password must be at least 6 characters." });
+      setMessage({
+        type: "error",
+        text: "New password must be at least 6 characters long.",
+      });
       return;
     }
 
-    // Success (simulate API call)
-    setTimeout(() => {
-      setMessage({ type: "success", text: "Password changed successfully!" });
-      setUserId(""); setOldPassword(""); setNewPassword(""); setConfirm("");
-    }, 600);
+    try {
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/change-password`,
+        {
+          userName,
+          oldPassword,
+          newPassword,
+        }
+      );
+
+      if (res.data.status === "success") {
+        setMessage({
+          type: "success",
+          text: "✅ Password changed successfully!",
+        });
+        setOldPassword("");
+        setNewPassword("");
+        setConfirm("");
+      } else {
+        setMessage({
+          type: "error",
+          text: res.data.message || "Something went wrong.",
+        });
+      }
+    } catch (err) {
+      console.error("Password change error:", err);
+      setMessage({
+        type: "error",
+        text:
+          err.response?.data?.message ||
+          "❌ Failed to change password. Please try again.",
+      });
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       <Navbar />
 
-
-    <div className="max-w-7xl mx-auto pt-6 px-6">
-  <Link
-    href="/dashboard"
-    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow hover:scale-105 transition-all duration-150 hover:from-blue-700 hover:to-purple-700"
-    title="Go to Dashboard"
-  >
-    <Home className="w-5 h-5" />
-    <span className="hidden sm:inline">Home</span>
-  </Link>
-</div>
+      <div className="max-w-7xl mx-auto pt-6 px-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow hover:scale-105 transition-all duration-150 hover:from-blue-700 hover:to-purple-700"
+          title="Go to Dashboard"
+        >
+          <Home className="w-5 h-5" />
+          <span className="hidden sm:inline">Home</span>
+        </Link>
+      </div>
 
       <div className="flex justify-center items-center min-h-[75vh] px-4">
         <form
           onSubmit={handleSubmit}
           className="w-full max-w-md bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-2xl p-8 border border-purple-600/20"
         >
-          <h1 className="text-2xl md:text-3xl font-bold text-white text-center mb-2">Change Password</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-white text-center mb-2">
+            Change Password
+          </h1>
           <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full mb-6"></div>
 
-          {/* User ID */}
+          {/* Username */}
           <div className="mb-4">
             <label className="text-slate-200 text-sm font-medium flex items-center gap-2 mb-2">
-              <User className="w-4 h-4" /> User ID
+              <User className="w-4 h-4" /> Username
             </label>
             <input
               type="text"
               className="w-full px-4 py-3 rounded-xl bg-slate-900/80 text-white border border-slate-600/50 focus:border-pink-500 outline-none transition-all"
-              placeholder="Enter your User ID"
-              value={userId}
-              onChange={e => setUserId(e.target.value)}
-              autoComplete="username"
+              value={userName}
+              readOnly
             />
           </div>
 
@@ -97,16 +139,19 @@ export default function Page() {
               className="w-full px-4 py-3 rounded-xl bg-slate-900/80 text-white border border-slate-600/50 focus:border-pink-500 outline-none transition-all pr-12"
               placeholder="Enter old password"
               value={oldPassword}
-              onChange={e => setOldPassword(e.target.value)}
-              autoComplete="current-password"
+              onChange={(e) => setOldPassword(e.target.value)}
             />
             <button
               type="button"
-              onClick={() => setShowOld(v => !v)}
+              onClick={() => setShowOld((v) => !v)}
               className="absolute right-3 top-9 text-slate-400 hover:text-pink-400 transition"
               tabIndex={-1}
             >
-              {showOld ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showOld ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
 
@@ -120,20 +165,23 @@ export default function Page() {
               className="w-full px-4 py-3 rounded-xl bg-slate-900/80 text-white border border-slate-600/50 focus:border-pink-500 outline-none transition-all pr-12"
               placeholder="Enter new password"
               value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              autoComplete="new-password"
+              onChange={(e) => setNewPassword(e.target.value)}
             />
             <button
               type="button"
-              onClick={() => setShowNew(v => !v)}
+              onClick={() => setShowNew((v) => !v)}
               className="absolute right-3 top-9 text-slate-400 hover:text-pink-400 transition"
               tabIndex={-1}
             >
-              {showNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showNew ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
 
-          {/* Confirm New Password */}
+          {/* Confirm Password */}
           <div className="mb-6 relative">
             <label className="text-slate-200 text-sm font-medium flex items-center gap-2 mb-2">
               <Lock className="w-4 h-4" /> Confirm New Password
@@ -143,16 +191,19 @@ export default function Page() {
               className="w-full px-4 py-3 rounded-xl bg-slate-900/80 text-white border border-slate-600/50 focus:border-pink-500 outline-none transition-all pr-12"
               placeholder="Confirm new password"
               value={confirm}
-              onChange={e => setConfirm(e.target.value)}
-              autoComplete="new-password"
+              onChange={(e) => setConfirm(e.target.value)}
             />
             <button
               type="button"
-              onClick={() => setShowConfirm(v => !v)}
+              onClick={() => setShowConfirm((v) => !v)}
               className="absolute right-3 top-9 text-slate-400 hover:text-pink-400 transition"
               tabIndex={-1}
             >
-              {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showConfirm ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
 

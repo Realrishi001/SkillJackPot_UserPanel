@@ -1179,126 +1179,126 @@ function assignValueToNumber(num, value, cellKey) {
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [activeCheckbox, columnHeaders, rowHeaders, checkboxInputs]);
 
-  const handlePrint = async () => {
-    if (isPrintingRef.current) return;
-    isPrintingRef.current = true;
-    setIsPrinting(true);
+    const handlePrint = async () => {
+      if (isPrintingRef.current) return;
+      isPrintingRef.current = true;
+      setIsPrinting(true);
 
-    try {
-      const ticketList = getTicketList();
+      try {
+        const ticketList = getTicketList();
 
-      if (remainSecs <= 30) {
+        if (remainSecs <= 30) {
+          toast.error(
+            "Print is disabled during the last 30 seconds before draw time!"
+          );
+          return;
+        }
+
+        const totalUpdatedQuantity = updatedQuantity.reduce(
+          (sum, val) => sum + val,
+          0
+        );
+        if (totalUpdatedQuantity === 0) {
+          toast.error("No quantity selected or no tickets to print.");
+          return;
+        }
+
+        const drawMultiplier =
+          advanceDrawTimes && advanceDrawTimes.length > 0
+            ? advanceDrawTimes.length
+            : 1;
+        const totalUpdatedPoints = updatedPoints.reduce(
+          (sum, val) => sum + val,
+          0
+        );
+
+        const displayTotalQuantity = totalUpdatedQuantity * drawMultiplier;
+        const displayTotalPoints = totalUpdatedPoints * drawMultiplier;
+
+        const loginId = getLoginIdFromToken();
+        if (!loginId) {
+          toast.error("User not logged in.");
+          return;
+        }
+
+        const gameTime = getFormattedDateTime();
+
+        const payload = {
+          gameTime,
+          ticketNumber: ticketList.join(", "),
+          totalQuatity: displayTotalQuantity,
+          totalPoints: displayTotalPoints,
+          loginId,
+          drawTime:
+            advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
+        };
+
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
+          payload
+        );
+
+        setRefreshKey((prev) => prev + 1);
+
+        if (response.status === 201) {
+          const data = response.data || {};
+          const ticketObjId = data.ticket?.id ?? data.ticket?.ticketId ?? null;
+          const rootId = data.ticketId ?? data.id ?? null;
+          const ticketId = String(ticketObjId ?? rootId ?? Date.now());
+
+          toast.success(`Tickets saved successfully! Ticket ID: ${ticketId}`);
+
+          generatePrintReceipt(
+            {
+              gameTime,
+              drawTime:
+                advanceDrawTimes.length > 0
+                  ? advanceDrawTimes
+                  : [currentDrawSlot],
+              loginId,
+              ticketNumber: ticketList.join(", "),
+              totalQuatity: displayTotalQuantity,
+              totalPoints: displayTotalPoints,
+            },
+            ticketId
+          );
+
+          await fetchBalanceLimit();
+
+          setSelected(
+            Array(10)
+              .fill(null)
+              .map(() => Array(3).fill(false))
+          );
+          setQuantities(Array(10).fill(0));
+          setPoints(Array(10).fill(0));
+          setCellOverrides({});
+          setColumnHeaders(Array(10).fill(""));
+          setRowHeaders(Array(10).fill(""));
+          setCheckboxInputs({});
+          localStorage.removeItem("checkboxInputs");
+          setAdvanceDrawTimes([]);
+          setActiveCheckbox(null);
+          setActiveColGroup(null);
+        } else {
+          toast.error(
+            "Failed to save tickets: " +
+              (response.data?.message || "Unknown error")
+          );
+        }
+      } catch (error) {
         toast.error(
-          "Print is disabled during the last 30 seconds before draw time!"
+          "Error saving tickets: " +
+            (error?.response?.data?.message ||
+              error?.response?.data?.error ||
+              error.message)
         );
-        return;
-      }
-
-      const totalUpdatedQuantity = updatedQuantity.reduce(
-        (sum, val) => sum + val,
-        0
-      );
-      if (totalUpdatedQuantity === 0) {
-        toast.error("No quantity selected or no tickets to print.");
-        return;
-      }
-
-      const drawMultiplier =
-        advanceDrawTimes && advanceDrawTimes.length > 0
-          ? advanceDrawTimes.length
-          : 1;
-      const totalUpdatedPoints = updatedPoints.reduce(
-        (sum, val) => sum + val,
-        0
-      );
-
-      const displayTotalQuantity = totalUpdatedQuantity * drawMultiplier;
-      const displayTotalPoints = totalUpdatedPoints * drawMultiplier;
-
-      const loginId = getLoginIdFromToken();
-      if (!loginId) {
-        toast.error("User not logged in.");
-        return;
-      }
-
-      const gameTime = getFormattedDateTime();
-
-      const payload = {
-        gameTime,
-        ticketNumber: ticketList.join(", "),
-        totalQuatity: displayTotalQuantity,
-        totalPoints: displayTotalPoints,
-        loginId,
-        drawTime:
-          advanceDrawTimes.length > 0 ? advanceDrawTimes : [currentDrawSlot],
-      };
-
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/saveTicket`,
-        payload
-      );
-
-      setRefreshKey((prev) => prev + 1);
-
-      if (response.status === 201) {
-        const data = response.data || {};
-        const ticketObjId = data.ticket?.id ?? data.ticket?.ticketId ?? null;
-        const rootId = data.ticketId ?? data.id ?? null;
-        const ticketId = String(ticketObjId ?? rootId ?? Date.now());
-
-        toast.success(`Tickets saved successfully! Ticket ID: ${ticketId}`);
-
-        generatePrintReceipt(
-          {
-            gameTime,
-            drawTime:
-              advanceDrawTimes.length > 0
-                ? advanceDrawTimes
-                : [currentDrawSlot],
-            loginId,
-            ticketNumber: ticketList.join(", "),
-            totalQuatity: displayTotalQuantity,
-            totalPoints: displayTotalPoints,
-          },
-          ticketId
-        );
-
+      } finally {
         await fetchBalanceLimit();
-
-        setSelected(
-          Array(10)
-            .fill(null)
-            .map(() => Array(3).fill(false))
-        );
-        setQuantities(Array(10).fill(0));
-        setPoints(Array(10).fill(0));
-        setCellOverrides({});
-        setColumnHeaders(Array(10).fill(""));
-        setRowHeaders(Array(10).fill(""));
-        setCheckboxInputs({});
-        localStorage.removeItem("checkboxInputs");
-        setAdvanceDrawTimes([]);
-        setActiveCheckbox(null);
-        setActiveColGroup(null);
-      } else {
-        toast.error(
-          "Failed to save tickets: " +
-            (response.data?.message || "Unknown error")
-        );
+        isPrintingRef.current = false;
+        setIsPrinting(false);
       }
-    } catch (error) {
-      toast.error(
-        "Error saving tickets: " +
-          (error?.response?.data?.message ||
-            error?.response?.data?.error ||
-            error.message)
-      );
-    } finally {
-      await fetchBalanceLimit();
-      isPrintingRef.current = false;
-      setIsPrinting(false);
-    }
-  };
+    };
 
   const totalUpdatedQuantity = updatedQuantity.reduce(
     (sum, val) => sum + val,

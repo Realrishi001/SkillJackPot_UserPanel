@@ -1,68 +1,208 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Printer, Search, Calendar, Ticket, Filter, ChevronLeft, ChevronRight, Home } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Printer, Search, Calendar, Ticket, Filter, Home } from "lucide-react";
 import Navbar from "../../Components/Navbar/Navbar";
 import Link from "next/link";
 import axios from "axios";
+import toast from "react-hot-toast";
+import jsPDF from "jspdf";
+import JsBarcode from "jsbarcode";
 
 const entryOptions = [10, 20, 50, 100];
 
-const Page = () => {
+/* 🧠 Helper to get loginId from JWT in localStorage */
+function getLoginIdFromToken() {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.id;
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+/* 🧾 Print Ticket Generator (same format as your main page) */
+function generatePrintReceipt(data, ticketId) {
+  const lineHeight = 4;
+  const ticketArray = (data.ticketNumber || "").split(", ").filter(Boolean);
+  const ticketRows = Math.ceil(ticketArray.length / 3);
+
+  const afterListLineGap = 5;
+  const totalsBlock = 5 + 5 + 8;
+  const barcodeBlock = 20 + 10;
+
+  let requiredHeight =
+    50 +
+    ticketRows * lineHeight +
+    afterListLineGap +
+    totalsBlock +
+    barcodeBlock;
+
+  const pageHeight = Math.max(297, requiredHeight);
+
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: [80, pageHeight],
+  });
+
+  pdf.setFontSize(10);
+  pdf.text("Skill Jackpot", 40, 10, { align: "center" });
+  pdf.setFontSize(8);
+  pdf.text("This game for Adults Amusement Only", 40, 15, { align: "center" });
+  pdf.text("GST No Issued by Govt of India", 40, 20, { align: "center" });
+  pdf.text("GST No: In Process", 40, 25, { align: "center" });
+  pdf.text(`Date: ${data.gameTime}`, 40, 30, { align: "center" });
+
+  pdf.setLineWidth(0.5);
+  pdf.line(5, 33, 75, 33);
+
+  pdf.setFontSize(9);
+  const drawTimeText = Array.isArray(data.drawTime)
+    ? data.drawTime.length > 1
+      ? `Draw Times: ${data.drawTime.join(", ")}`
+      : `Draw Time: ${data.drawTime[0]}`
+    : `Draw Time: ${data.drawTime}`;
+  pdf.text(drawTimeText, 5, 38);
+  pdf.text(`Login Id: ${data.loginId}`, 5, 43);
+
+  pdf.line(5, 45, 75, 45);
+
+  let yPos = 50;
+  for (let i = 0; i < ticketArray.length; i += 3) {
+    let rowText = "";
+    for (let j = 0; j < 3 && i + j < ticketArray.length; j++) {
+      const ticket = ticketArray[i + j];
+      const formattedTicket = ticket.substring(0, 18);
+      rowText += formattedTicket.padEnd(25, " ");
+    }
+    pdf.setFontSize(7);
+    pdf.text(rowText.trim(), 5, yPos);
+    yPos += lineHeight;
+  }
+
+  pdf.line(5, yPos, 75, yPos);
+  yPos += 5;
+
+  pdf.setFontSize(10);
+  pdf.text(`Total Quantity : ${data.totalQuatity}`, 5, yPos);
+  yPos += 5;
+  pdf.text(`Total Amount : ${data.totalPoints}`, 5, yPos);
+  yPos += 8;
+
+  const barcodeValue = `${data.ticketNumber}`;
+
+  const canvas = document.createElement("canvas");
+  JsBarcode(canvas, barcodeValue, {
+    format: "CODE128",
+    width: 2,
+    height: 50,
+    displayValue: true,
+    fontSize: 14,
+    margin: 5,
+  });
+  const barcodeImage = canvas.toDataURL("image/png");
+  pdf.addImage(barcodeImage, "PNG", 10, yPos, 60, 20);
+
+  pdf.autoPrint();
+  const pdfBlob = pdf.output("blob");
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  const printWindow = window.open(pdfUrl);
+  if (printWindow) {
+    printWindow.onload = function () {
+      printWindow.print();
+    };
+  } else {
+    toast.error("Please allow pop-ups to print the ticket.");
+  }
+}
+
+/* 🎟️ Main Page */
+const ReprintPage = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
   const [showEntries, setShowEntries] = useState(10);
   const [search, setSearch] = useState("");
   const [current, setCurrent] = useState(1);
-  const [ticketSearch, setTicketSearch] = useState("");
-  const [dateSearch, setDateSearch] = useState("");
+  const [isPrinting, setIsPrinting] = useState(false);
+  const isPrintingRef = useRef(false);
 
-  useEffect(() => {
-    if (!localStorage.getItem("userToken")) {
-      router.push("/");
+  /* 🔹 Fetch today’s tickets for this admin */
+  const fetchTickets = async () => {
+    try {
+      setLoading(true);
+      const loginId = getLoginIdFromToken();
+      if (!loginId) return toast.error("User not logged in.");
+
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/reprint-tickets`,
+        { loginId }
+      );
+
+      if (res.data?.data?.length > 0) {
+        setTickets(res.data.data);
+      } else {
+        setTickets([]);
+        toast("No tickets found for today.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load tickets.");
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  };
 
-  // Fetch ticket data from backend
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    axios
-      .get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/reprint-tickets`)
-      .then(res => {
-        setTickets(res.data.data || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError("Failed to fetch tickets");
-        setLoading(false);
-      });
+    fetchTickets();
   }, []);
 
-  // Filter logic
-  let filtered = tickets;
-  if (ticketSearch.trim() !== "") {
-    filtered = filtered.filter((row) =>
-      String(row.ticketNo || "").toLowerCase().includes(ticketSearch.toLowerCase())
-    );
-  }
-  if (dateSearch.trim() !== "") {
-    filtered = filtered.filter((row) =>
-      (row.gameDate || "").startsWith(dateSearch)
-    );
-  }
-  if (search.trim() !== "") {
-    filtered = filtered.filter(
-      (row) =>
-        String(row.ticketNo || "").toLowerCase().includes(search.toLowerCase()) ||
-        (row.gameDate || "").includes(search) ||
-        (row.gameTime || "").toLowerCase().includes(search.toLowerCase())
-    );
-  }
+  /* 🔹 Print a specific ticket */
+  const handlePrint = (ticket) => {
+    if (isPrintingRef.current) return;
+    isPrintingRef.current = true;
+    setIsPrinting(true);
 
-  // Pagination
+    try {
+      toast.success(`Printing Ticket #${ticket.ticketNo}`);
+
+      generatePrintReceipt(
+        {
+          gameTime: `${ticket.gameDate} ${ticket.gameTime}`,
+          drawTime: ticket.drawTime,
+          loginId: getLoginIdFromToken(),
+          ticketNumber: ticket.ticketNumber,
+          totalQuatity: ticket.totalQuatity,
+          totalPoints: ticket.totalPoints,
+        },
+        ticket.ticketNo
+      );
+    } catch (error) {
+      toast.error("Error while printing ticket.");
+      console.error(error);
+    } finally {
+      isPrintingRef.current = false;
+      setIsPrinting(false);
+    }
+  };
+
+  /* 🔎 Search Filter */
+  const filtered = tickets.filter((row) => {
+    if (!search.trim()) return true;
+    return (
+      String(row.ticketNo).toLowerCase().includes(search.toLowerCase()) ||
+      String(row.gameTime).toLowerCase().includes(search.toLowerCase()) ||
+      String(row.gameDate).toLowerCase().includes(search.toLowerCase())
+    );
+  });
+
+  /* 📄 Pagination */
   const totalPages = Math.ceil(filtered.length / showEntries);
   const startIdx = (current - 1) * showEntries;
   const showData = filtered.slice(startIdx, startIdx + showEntries);
@@ -75,209 +215,131 @@ const Page = () => {
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow hover:scale-105 transition-all duration-150 hover:from-blue-700 hover:to-purple-700"
-          title="Go to Dashboard"
         >
           <Home className="w-5 h-5" />
-          <span className="hidden sm:inline">Home</span>
+          Home
         </Link>
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8 mt-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 text-center">
-            Reprint Ticket
-          </h1>
-          <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto rounded-full"></div>
-        </div>
+        <h1 className="text-3xl md:text-4xl font-bold text-white text-center mb-6">
+          Reprint Tickets
+        </h1>
+        <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto rounded-full mb-10"></div>
 
-        {/* Main Content Card */}
-        <div className="bg-gradient-to-r from-slate-800/95 to-slate-700/95 rounded-2xl shadow-2xl border border-slate-700/50 backdrop-blur-sm">
-          {/* Search Filters Section */}
-          <div className="p-8 border-b border-slate-700/50">
-            <div className="flex items-center gap-2 mb-6">
-              <Filter className="w-5 h-5 text-blue-400" />
-              <h2 className="text-xl font-semibold text-white">Search Filters</h2>
+        <div className="bg-gradient-to-r from-slate-800/95 to-slate-700/95 rounded-2xl shadow-2xl border border-slate-700/50 p-8">
+          {/* 🔍 Search Bar */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <Search className="w-5 h-5 text-blue-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrent(1);
+                }}
+                className="px-4 py-2 rounded-lg bg-slate-900/80 text-white border border-slate-600/50 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-200 w-72"
+                placeholder="Search ticket/date/time..."
+              />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Ticket Number Search */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                  <Ticket className="w-4 h-4" />
-                  Ticket Number
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    className="w-full px-4 py-3 rounded-lg bg-slate-900/80 text-white border border-slate-600/50 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-200"
-                    value={ticketSearch}
-                    onChange={(e) => setTicketSearch(e.target.value)}
-                    placeholder="Enter ticket number"
-                  />
-                </div>
-              </div>
-              {/* Date Search */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                  <Calendar className="w-4 h-4" />
-                  Draw Date
-                </label>
-                <input
-                  type="date"
-                  className="w-full px-4 py-3 rounded-lg bg-slate-900/80 text-white border border-slate-600/50 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-200"
-                  value={dateSearch}
-                  onChange={(e) => setDateSearch(e.target.value)}
-                />
-              </div>
-              {/* Search Button */}
-              <div className="flex items-end">
-                <button
-                  onClick={() => setCurrent(1)}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  <Search className="w-5 h-5" />
-                  Search
-                </button>
-              </div>
+            <div>
+              <button
+                onClick={fetchTickets}
+                className="px-4 py-2 bg-gradient-to-r from-green-600 to-lime-600 rounded-lg text-white font-semibold shadow hover:scale-105 transition-all duration-200"
+              >
+                Refresh
+              </button>
             </div>
           </div>
 
-          {/* Table Controls */}
-          <div className="p-8 border-b border-slate-700/50">
-            <div className="flex flex-col sm:flex-row sm:justify-between gap-4 items-center">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-300 text-sm font-medium">Show</span>
-                <select
-                  value={showEntries}
-                  onChange={(e) => {
-                    setShowEntries(Number(e.target.value));
-                    setCurrent(1);
-                  }}
-                  className="px-3 py-2 rounded-lg bg-slate-900/80 text-white border border-slate-600/50 outline-none focus:border-blue-400 transition-all duration-200"
-                >
-                  {entryOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-slate-300 text-sm font-medium">entries</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-slate-300 text-sm font-medium">Quick Search:</span>
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setCurrent(1);
-                    }}
-                    className="pl-10 pr-4 py-2 rounded-lg bg-slate-900/80 text-white border border-slate-600/50 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-200 w-64"
-                    placeholder="Type to search..."
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="p-8">
-            <div className="overflow-x-auto rounded-xl border border-slate-600/50">
-              <table className="min-w-full text-left bg-slate-800/50 text-white">
-                <thead>
-                  <tr className="bg-slate-700/50">
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Game Time</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Game Date</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Ticket No</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50">Points</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-slate-200 border-b border-slate-600/50 text-center">Action</th>
+          {/* 📋 Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-600/50">
+            <table className="min-w-full text-left bg-slate-800/50 text-white">
+              <thead>
+                <tr className="bg-slate-700/50">
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-200">Ticket No</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-200">Game Date</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-200">Game Time</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-200">Draw Time</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-200">Points</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-200">Quantity</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-200 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-slate-400">
+                      Loading tickets...
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-slate-400">Loading tickets...</td>
-                    </tr>
-                  ) : error ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-red-400">{error}</td>
-                    </tr>
-                  ) : showData.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                        <div className="flex flex-col items-center gap-3">
-                          <Search className="w-12 h-12 text-slate-500" />
-                          <p className="text-lg font-medium">No matching records found</p>
-                          <p className="text-sm">Try adjusting your search criteria</p>
-                        </div>
+                ) : showData.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-slate-400">
+                      No tickets found.
+                    </td>
+                  </tr>
+                ) : (
+                  showData.map((row) => (
+                    <tr key={row.ticketNo} className="hover:bg-slate-700/30 transition-colors">
+                      <td className="px-6 py-4 text-blue-400 font-mono">{row.ticketNo}</td>
+                      <td className="px-6 py-4">{row.gameDate}</td>
+                      <td className="px-6 py-4">{row.gameTime}</td>
+                      <td className="px-6 py-4">{Array.isArray(row.drawTime) ? row.drawTime.join(", ") : row.drawTime}</td>
+                      <td className="px-6 py-4 text-green-400 font-bold">{row.totalPoints}</td>
+                      <td className="px-6 py-4 text-yellow-300 font-bold">{row.totalQuatity}</td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => handlePrint(row)}
+                          disabled={isPrinting}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
+                            isPrinting
+                              ? "bg-slate-500 cursor-not-allowed"
+                              : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          } text-white text-sm font-semibold shadow-lg transition-all duration-200`}
+                        >
+                          <Printer className="w-4 h-4" />
+                          {isPrinting ? "Printing..." : "Print"}
+                        </button>
                       </td>
                     </tr>
-                  ) : (
-                    showData.map((row, i) => (
-                      <tr key={row.id || i} className="hover:bg-slate-700/30 transition-colors duration-150">
-                        <td className="px-6 py-4 text-sm text-slate-300 border-b border-slate-700/30">{row.gameTime}</td>
-                        <td className="px-6 py-4 text-sm text-slate-300 border-b border-slate-700/30">{row.gameDate || "-"}</td>
-                        <td className="px-6 py-4 text-sm font-mono text-blue-300 border-b border-slate-700/30">{row.ticketNo || "-"}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-green-400 border-b border-slate-700/30">{row.totalPoints}</td>
-                        <td className="px-6 py-4 text-center border-b border-slate-700/30">
-                          <button
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 hover:from-purple-700 hover:to-pink-700"
-                            title="Print Ticket"
-                          >
-                            <Printer className="w-4 h-4" />
-                            Print
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-            {/* Pagination */}
-            <div className="flex flex-col sm:flex-row sm:justify-between items-center mt-8 gap-4">
-              <div className="text-slate-400 text-sm">
-                Showing <span className="font-semibold text-slate-200">{startIdx + 1}</span> to{" "}
-                <span className="font-semibold text-slate-200">
-                  {Math.min(startIdx + showEntries, filtered.length)}
-                </span>{" "}
-                of <span className="font-semibold text-slate-200">{filtered.length}</span> entries
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={current === 1}
-                  onClick={() => setCurrent((c) => Math.max(1, c - 1))}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold border text-sm transition-all duration-200 ${
-                    current === 1
-                      ? "opacity-40 cursor-not-allowed border-slate-700/40 text-slate-500"
-                      : "border-slate-600/50 text-white bg-slate-700/50 hover:bg-slate-600/50 hover:scale-105"
-                  }`}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </button>
-                <div className="flex items-center gap-1">
-                  <span className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold">
-                    {current}
-                  </span>
-                  <span className="text-slate-400 text-sm">of {totalPages}</span>
-                </div>
-                <button
-                  disabled={current === totalPages || totalPages === 0}
-                  onClick={() => setCurrent((c) => Math.min(totalPages, c + 1))}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold border text-sm transition-all duration-200 ${
-                    current === totalPages || totalPages === 0
-                      ? "opacity-40 cursor-not-allowed border-slate-700/40 text-slate-500"
-                      : "border-slate-600/50 text-white bg-slate-700/50 hover:bg-slate-600/50 hover:scale-105"
-                  }`}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+          {/* 📄 Pagination Footer */}
+          <div className="flex justify-between items-center mt-6 text-slate-400 text-sm">
+            <div>
+              Showing{" "}
+              <span className="font-semibold text-slate-200">
+                {startIdx + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-semibold text-slate-200">
+                {Math.min(startIdx + showEntries, filtered.length)}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-slate-200">{filtered.length}</span> entries
+            </div>
+            <div className="flex items-center gap-3">
+              <span>Show</span>
+              <select
+                value={showEntries}
+                onChange={(e) => {
+                  setShowEntries(Number(e.target.value));
+                  setCurrent(1);
+                }}
+                className="px-2 py-1 rounded bg-slate-900 text-white border border-slate-600"
+              >
+                {entryOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -286,4 +348,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default ReprintPage;

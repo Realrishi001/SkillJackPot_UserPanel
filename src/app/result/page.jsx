@@ -38,65 +38,35 @@ function filterNumbersByColumn(numbers, colStart, colEnd) {
   });
 }
 
-function getLoginIdFromToken() {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("userToken");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        return payload.id;
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
 const Page = () => {
   const [selectedCol, setSelectedCol] = useState(0);
   const [tableData, setTableData] = useState([]);
   const [rowLabels, setRowLabels] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loginId, setLoginId] = useState(null);
-
-  useEffect(() => {
-    if (!localStorage.getItem("userToken")) {
-      router.push("/");
-    }
-  }, []);
-
-  useEffect(() => {
-    setLoginId(getLoginIdFromToken());
-  }, []);
 
   const columns = getColumns(
     columnRanges[selectedCol].start,
     columnRanges[selectedCol].end
   );
 
-  // Get today’s date (once)
   const todayDate = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    if (!loginId) return;
     setLoading(true);
 
     axios
-      .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-slots`, {
-        loginId: loginId,
-        drawDate: todayDate, // always today's date
-      })
+      .get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-slots`)
       .then((res) => {
         const records = Array.isArray(res.data.results)
           ? res.data.results
           : [];
 
-        // Filter only for today's results
+        // Filter results for today
         const filteredRecords = records.filter(
           (rec) => rec.drawDate === todayDate
         );
 
+        // Collect all unique draw times
         const allDrawTimes = Array.from(
           new Set(
             filteredRecords
@@ -111,6 +81,7 @@ const Page = () => {
 
         setRowLabels(allDrawTimes);
 
+        // Group numbers by draw time
         const timeToNumbers = {};
         filteredRecords.forEach((rec) => {
           let numbers = rec.winningNumbers;
@@ -128,6 +99,7 @@ const Page = () => {
           timeToNumbers[t] = numbers;
         });
 
+        // Prepare final table data
         const newTableData = allDrawTimes.map((drawTime) => {
           const slotNumbers = timeToNumbers[drawTime] || [];
           const filtered = filterNumbersByColumn(
@@ -151,7 +123,7 @@ const Page = () => {
         setRowLabels([]);
         setLoading(false);
       });
-  }, [selectedCol, loginId]);
+  }, [selectedCol]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -181,9 +153,7 @@ const Page = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Grid3x3 className="w-5 h-5 text-blue-400" />
-              <span className="text-slate-200 font-medium">
-                Number Range:
-              </span>
+              <span className="text-slate-200 font-medium">Number Range:</span>
             </div>
             <div className="flex gap-2">
               {columnRanges.map((col, idx) => (
@@ -277,8 +247,12 @@ const Page = () => {
 
           <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="text-sm text-slate-400">
-              Showing results for <span className="font-semibold text-slate-200">{todayDate}</span> •
-              Range <span className="font-semibold text-slate-200">{columnRanges[selectedCol].label}</span>
+              Showing results for{" "}
+              <span className="font-semibold text-slate-200">{todayDate}</span>{" "}
+              • Range{" "}
+              <span className="font-semibold text-slate-200">
+                {columnRanges[selectedCol].label}
+              </span>
             </div>
           </div>
         </div>
