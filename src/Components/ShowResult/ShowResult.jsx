@@ -151,22 +151,35 @@ export default function ShowResult({ drawTime }) {
 
   useEffect(() => {
     if (!drawTime || gameId === "-") return;
+
+    console.log("🎯 Fetching results for drawTime:", drawTime);
+    console.log("🕒 Backend converted drawTime:", getBackendDrawTime(drawTime));
+    console.log("🧾 Admin ID:", gameId);
+
     axios
       .post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-winning-numbers`, {
         drawTime: getBackendDrawTime(drawTime),
         adminId: gameId,
       })
       .then((res) => {
+        console.log("✅ Raw API Response:", res.data);
+
         let tickets = [];
         if (Array.isArray(res.data.selectedTickets)) {
           tickets = res.data.selectedTickets;
         } else if (res.data.numbersBySeries) {
           tickets = Object.values(res.data.numbersBySeries).flat();
         }
+
+        console.log("🎰 Parsed Ticket Numbers:", tickets);
+
         const [s10, s30, s50] = getSeriesRows(tickets);
+        console.log("📊 Series Split:", { "10–19": s10, "30–39": s30, "50–59": s50 });
+
         setTicketNumbers([s10, s30, s50]);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("🔥 Error fetching winning numbers:", err);
         setTicketNumbers([
           Array(10).fill(""),
           Array(10).fill(""),
@@ -176,17 +189,14 @@ export default function ShowResult({ drawTime }) {
   }, [drawTime, gameId]);
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-0">
+    <div className="w-full h-full flex items-center justify-center p-2">
       <img
-            src="/Logo.png"
-            alt="Skill Jackpot"
-            draggable="false"
-            className="w-[140px] lg:w-[180px] h-auto 
-                       drop-shadow-[0_0_12px_#000000]"
-          />
-      <div className="w-full h-full flex items-center justify-center p-1">
-        <CasinoSlotMachine rows={ticketNumbers} />
-      </div>
+        src="/Logo.png"
+        alt="Skill Jackpot"
+        draggable="false"
+        className="w-[140px] lg:w-[180px] h-auto drop-shadow-[0_0_12px_#000000]"
+      />
+      <CasinoSlotMachine rows={ticketNumbers} />
     </div>
   );
 }

@@ -550,71 +550,169 @@ function assignValueToNumber(num, value, cellKey) {
     }
   };
 
-  const handleCheckTicketStatus = async (ticketNumber) => {
-    try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/is-claim-tickets`,
-        { ticketId: ticketNumber.trim() }
-      );
+const handleCheckTicketStatus = async (ticketNumber) => {
+  try {
+    const res = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/is-claim-tickets`,
+      { ticketId: ticketNumber.trim() }
+    );
 
-      if (res.status === 404 || res.data?.message === "Ticket not found") {
-        toast.error("⚠️ Wrong Ticket ID — No such ticket found.");
-        setTicketStatusData({ notFound: true });
-        setIsClaimable(false);
-        setTicketStatusModalOpen(true);
-        return;
-      }
+    const data = res.data;
 
-      if (res.data && res.data.status === "success") {
-        const data = res.data.ticket || {};
-        setTicketStatusData({
-          ticketNumber: data.ticketNumber,
-          drawTime: data.drawTime,
-          prizeAmount: data.prizeAmount,
-          isWinner: data.isWinner,
-          isClaimed: data.isClaimed,
-        });
-
-        setIsClaimable(data.isWinner && !data.isClaimed);
-        setTicketStatusModalOpen(true);
-      } else {
-        setTicketStatusData({ isWinner: false });
-        setIsClaimable(false);
-        setTicketStatusModalOpen(true);
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setTicketStatusData({ notFound: true });
-        setIsClaimable(false);
-        setTicketStatusModalOpen(true);
-        return;
-      }
-
-      console.error("Error checking ticket:", error);
-      toast.error("Failed to check ticket status. Please try again.");
+    if (data.status === "error" || res.status === 404) {
+      toast.error("⚠️ Invalid Ticket ID");
+      return;
     }
-  };
 
-  const handleClaimTicket = async () => {
-    try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/save-claimed-ticket`,
-        { ticketId: transactionInput.trim() }
-      );
-      if (res.data.status === "success") {
-        toast.success(
-          "Claimed Successfully!\n" +
-            JSON.stringify(res.data.claimedTicket, null, 2)
-        );
-      } else {
-        toast.error(res.data.message || "Not a winning ticket");
-      }
-    } catch (err) {
-      toast.error(
-        "Error claiming ticket: " + (err?.response?.data?.error || err.message)
-      );
+    setTicketStatusData({
+      status: data.status,
+      ticketId: ticketNumber,
+      drawTime: data.drawTimes ? data.drawTimes.join(", ") : "-",
+      drawDate: data.drawDate || "-",
+      prizeAmount:
+        data.status === "winner"
+          ? data.winningTickets?.reduce(
+              (sum, t) => sum + (t.totalWinningValue || 0),
+              0
+            )
+          : 0,
+      claimedDate: data.claimedDetails?.claimedDate || null,
+      claimedTime: data.claimedDetails?.claimedTime || null,
+    });
+
+    setTicketStatusModalOpen(true);
+  } catch (error) {
+    console.error("❌ Error checking ticket:", error);
+    toast.error("Something went wrong while checking the ticket.");
+  }
+};
+
+
+const handleClaimTicket = async () => {
+  try {
+    if (!transactionInput.trim()) {
+      toast.error("Please enter a ticket ID or scan barcode.");
+      return;
     }
-  };
+
+    const res = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/save-claimed-ticket`,
+      { ticketId: transactionInput.trim() }
+    );
+
+    const data = res.data || {};
+
+    console.log("🎯 Claim API Response:", data);
+
+    // Case 1️⃣: Already claimed
+    if (data.status === "already_claimed") {
+      setTicketStatusData({
+        title: "⚠️ Ticket Already Claimed",
+        message: "This winning ticket has already been claimed.",
+        isWinner: true,
+        isClaimed: true,
+        matches: data.matches || [],
+      });
+      setIsClaimable(false);
+      setTicketStatusModalOpen(true);
+      return;
+    }
+
+    // Case 2️⃣: No win
+    if (data.status === "no_win") {
+      setTicketStatusData({
+        title: "❌ Not a Winning Ticket",
+        message: "This ticket has no winning numbers.",
+        isWinner: false,
+        isClaimed: false,
+      });
+      setIsClaimable(false);
+      setTicketStatusModalOpen(true);
+      return;
+    }
+
+    // Case 3️⃣: No winning data available (like date missing)
+    if (data.status === "no_winning_data") {
+      setTicketStatusData({
+        title: "⚠️ No Winning Data Available",
+        message:
+          "No winning numbers were declared for this draw date or draw time.",
+        isWinner: false,
+        isClaimed: false,
+      });
+      setTicketStatusModalOpen(true);
+      return;
+    }
+
+    // Case 4️⃣: Ticket not found
+    if (data.status === "error" && data.message === "Ticket not found") {
+      setTicketStatusData({
+        title: "🚫 Ticket Not Found",
+        message: "The ticket ID you entered does not exist.",
+        isWinner: false,
+        isClaimed: false,
+      });
+      setTicketStatusModalOpen(true);
+      return;
+    }
+
+    // Case 5️⃣: Ticket successfully claimed (winning)
+    if (data.status === "ticket_claimed") {
+      const totalPayout = (data.matches || []).reduce(
+        (sum, m) => sum + (m.payout || 0),
+        0
+      );
+
+      setTicketStatusData({
+        title: "🎉 Winning Ticket Claimed!",
+        message: `Congratulations! You’ve successfully claimed this ticket. Total Winning Amount: ₹${totalPayout}`,
+        isWinner: true,
+        isClaimed: true,
+        drawDate: data.drawDate,
+        drawTime: data.drawTime,
+        matches: data.matches || [],
+      });
+
+      toast.success("🎉 Ticket successfully claimed!");
+      setTicketStatusModalOpen(true);
+      setIsClaimable(false);
+      return;
+    }
+
+    // Fallback: unknown response
+    setTicketStatusData({
+      title: "⚠️ Unknown Response",
+      message: "Unable to determine ticket status. Please try again.",
+      isWinner: false,
+      isClaimed: false,
+    });
+    setTicketStatusModalOpen(true);
+  } catch (err) {
+    console.error("🔥 Error in handleClaimTicket:", err);
+    const errMsg =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err.message;
+
+    if (err?.response?.status === 404) {
+      setTicketStatusData({
+        title: "🚫 Ticket Not Found",
+        message: "The ticket ID you entered does not exist.",
+        isWinner: false,
+        isClaimed: false,
+      });
+    } else {
+      setTicketStatusData({
+        title: "🔥 Error",
+        message: `Something went wrong: ${errMsg}`,
+        isWinner: false,
+        isClaimed: false,
+      });
+    }
+
+    setTicketStatusModalOpen(true);
+  }
+};
 
   const colKeyToIndex = { "10-19": 0, "30-39": 1, "50-59": 2 };
 

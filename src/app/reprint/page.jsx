@@ -27,7 +27,6 @@ function getLoginIdFromToken() {
   return null;
 }
 
-/* 🧾 Print Ticket Generator (same format as your main page) */
 function generatePrintReceipt(data, ticketId) {
   const lineHeight = 4;
   const ticketArray = (data.ticketNumber || "").split(", ").filter(Boolean);
@@ -70,7 +69,7 @@ function generatePrintReceipt(data, ticketId) {
       : `Draw Time: ${data.drawTime[0]}`
     : `Draw Time: ${data.drawTime}`;
   pdf.text(drawTimeText, 5, 38);
-  pdf.text(`Login Id: ${data.loginId}`, 5, 43);
+  pdf.text(`Login Id: ${data.loginId || "-"}`, 5, 43);
 
   pdf.line(5, 45, 75, 45);
 
@@ -96,19 +95,26 @@ function generatePrintReceipt(data, ticketId) {
   pdf.text(`Total Amount : ${data.totalPoints}`, 5, yPos);
   yPos += 8;
 
-  const barcodeValue = `${data.ticketNumber}`;
+  /* ✅ Barcode Section — Only ticketNo */
+  const barcodeValue = `${ticketId}`; // only the ticket id in barcode
 
   const canvas = document.createElement("canvas");
   JsBarcode(canvas, barcodeValue, {
     format: "CODE128",
     width: 2,
     height: 50,
-    displayValue: true,
-    fontSize: 14,
+    displayValue: false, // hide text below barcode
     margin: 5,
   });
+
   const barcodeImage = canvas.toDataURL("image/png");
   pdf.addImage(barcodeImage, "PNG", 10, yPos, 60, 20);
+
+  yPos += 28;
+
+  // ✅ Show Ticket No text below barcode
+  pdf.setFontSize(12);
+  pdf.text(`Ticket No: ${ticketId}`, 40, yPos, { align: "center" });
 
   pdf.autoPrint();
   const pdfBlob = pdf.output("blob");
@@ -172,17 +178,20 @@ const ReprintPage = () => {
     try {
       toast.success(`Printing Ticket #${ticket.ticketNo}`);
 
-      generatePrintReceipt(
-        {
-          gameTime: `${ticket.gameDate} ${ticket.gameTime}`,
-          drawTime: ticket.drawTime,
-          loginId: getLoginIdFromToken(),
-          ticketNumber: ticket.ticketNumber,
-          totalQuatity: ticket.totalQuatity,
-          totalPoints: ticket.totalPoints,
-        },
-        ticket.ticketNo
-      );
+      const loginId = getLoginIdFromToken();
+
+generatePrintReceipt(
+  {
+    gameTime: `${ticket.gameDate} ${ticket.gameTime}`,
+    drawTime: ticket.drawTime,
+    loginId: getLoginIdFromToken(),
+    ticketNumber: ticket.ticketNumber,
+    totalQuatity: ticket.totalQuatity,
+    totalPoints: ticket.totalPoints,
+  },
+  ticket.ticketNo
+);
+
     } catch (error) {
       toast.error("Error while printing ticket.");
       console.error(error);
