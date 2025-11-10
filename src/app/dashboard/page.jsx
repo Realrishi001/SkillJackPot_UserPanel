@@ -1412,731 +1412,723 @@ function assignValueToNumber(num, value, cellKey) {
 
   const canPrint = remainSecs > 30 && displayTotalQuantity > 0;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <div className="w-full h-fit">
-        <ShowResult drawTime={currentDrawSlot} refreshKey={refreshKey} />
-      </div>
+return (
+  <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900" style={{ minWidth: '1400px' }}>
+    <div className="w-full h-fit">
+      <ShowResult drawTime={currentDrawSlot} refreshKey={refreshKey} />
+    </div>
 
-      {/* Header */}
-      <div className="w-full flex flex-col lg:flex-row items-center justify-between gap-4 px-4">
-        {/* LEFT: Filters */}
-        <div className="w-full lg:w-auto flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2 justify-center text-sm lg:justify-start">
-            {[
-              {
-                label: "All",
-                value: "all",
-                activeClass: "from-purple-600 to-pink-600",
-              },
-              {
-                label: "Even",
-                value: "even",
-                activeClass: "from-blue-600 to-indigo-600",
-              },
-              {
-                label: "Odd",
-                value: "odd",
-                activeClass: "from-rose-600 to-red-500",
-              },
-            ].map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => {
-                  const turningOff = activeTypeFilter === btn.value;
-                  if (turningOff) {
-                    setActiveTypeFilter(null);
-                  } else {
-                    setActiveTypeFilter(btn.value);
-                  }
-                }}
-                className={`px-1 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
-                  activeTypeFilter === btn.value
-                    ? `text-white bg-gradient-to-r ${btn.activeClass} shadow-lg`
-                    : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-                }`}
-              >
-                {btn.label}
-              </button>
-            ))}
-
-            {/* FP Mode */}
+    {/* Header */}
+    <div className="w-full flex items-center justify-between gap-4 px-4" style={{ minWidth: '1400px' }}>
+      {/* LEFT: Filters */}
+      <div className="w-auto flex flex-col gap-3">
+        <div className="flex gap-2 text-sm">
+          {[
+            {
+              label: "All",
+              value: "all",
+              activeClass: "from-purple-600 to-pink-600",
+            },
+            {
+              label: "Even",
+              value: "even",
+              activeClass: "from-blue-600 to-indigo-600",
+            },
+            {
+              label: "Odd",
+              value: "odd",
+              activeClass: "from-rose-600 to-red-500",
+            },
+          ].map((btn) => (
             <button
+              key={btn.value}
               onClick={() => {
-                setIsFPMode(!isFPMode);
-                if (isFPMode) {
-                  clearFPHighlights();
-                  setActiveFPSetIndex(null);
+                const turningOff = activeTypeFilter === btn.value;
+                if (turningOff) {
+                  setActiveTypeFilter(null);
+                } else {
+                  setActiveTypeFilter(btn.value);
                 }
               }}
-              className={`px-2 py-1 text-sm rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
-                isFPMode
-                  ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
-                  : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
+              className={`px-1 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+                activeTypeFilter === btn.value
+                  ? `text-white bg-gradient-to-r ${btn.activeClass} shadow-lg`
+                  : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
               }`}
             >
-              FP Mode
+              {btn.label}
             </button>
+          ))}
+
+          {/* FP Mode */}
+          <button
+            onClick={() => {
+              setIsFPMode(!isFPMode);
+              if (isFPMode) {
+                clearFPHighlights();
+                setActiveFPSetIndex(null);
+              }
+            }}
+            className={`px-2 py-1 text-sm rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+              isFPMode
+                ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
+                : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
+            }`}
+          >
+            FP Mode
+          </button>
+        </div>
+      </div>
+
+      {/* CENTER: Timer & Draw */}
+      <div className="flex-1 flex items-center justify-between gap-4">
+        <div className="flex-1 flex items-center justify-center gap-6">
+          <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md min-w-[180px]">
+            <Clock className="w-4 h-4 text-red-400 animate-pulse flex-shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400">
+                Time Remaining
+              </span>
+              <span className="text-lg font-mono font-bold text-red-400">
+                {remainTime}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md min-w-[200px]">
+            <Calendar className="w-4 h-4 text-green-400 flex-shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400">
+                Draw Date & Time
+              </span>
+              <span className="text-sm font-mono font-bold text-red-400">
+                {drawDate} | {currentDrawSlot}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* CENTER: Timer & Draw */}
-        <div className="w-full lg:flex-1 flex flex-col lg:flex-row items-center justify-between gap-4">
-          <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6">
-            <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md min-w-[180px]">
-              <Clock className="w-4 h-4 text-red-400 animate-pulse flex-shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400">
-                  Time Remaining
-                </span>
-                <span className="text-lg font-mono font-bold text-red-400">
-                  {remainTime}
-                </span>
-              </div>
+        {/* RIGHT: Game Status */}
+        <div className="w-auto">
+          <div className="grid grid-cols-4 gap-2 min-w-[400px]">
+            <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+              <span className="text-[10px] text-slate-400 font-medium">
+                Game ID
+              </span>
+              <span className="text-xs font-mono font-bold text-purple-400 truncate">
+                {gameIdBox}
+              </span>
             </div>
-
-            <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/90 border border-slate-700/60 rounded-sm shadow-md min-w-[200px]">
-              <Calendar className="w-4 h-4 text-green-400 flex-shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400">
-                  Draw Date & Time
-                </span>
-                <span className="text-sm font-mono font-bold text-red-400">
-                  {drawDate} | {currentDrawSlot}
-                </span>
-              </div>
+            <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+              <span className="text-[10px] text-slate-400 font-medium">
+                Last Points
+              </span>
+              <span className="text-xs font-mono font-bold text-pink-400">
+                {lastPoints}
+              </span>
             </div>
-          </div>
-
-          {/* RIGHT: Game Status */}
-          <div className="w-full lg:w-auto">
-            <div className="grid grid-cols-4 gap-2 min-w-[400px]">
-              <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Game ID
-                </span>
-                <span className="text-xs font-mono font-bold text-purple-400 truncate">
-                  {gameIdBox}
-                </span>
-              </div>
-              <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Last Points
-                </span>
-                <span className="text-xs font-mono font-bold text-pink-400">
-                  {lastPoints}
-                </span>
-              </div>
-              <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Last Ticket
-                </span>
-                <span className="text-xs font-mono font-bold text-cyan-400 truncate">
-                  {lastTicket}
-                </span>
-              </div>
-              <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Balance Limit
-                </span>
-                <span className="text-xs font-mono font-bold text-emerald-400">
-                  {balance}
-                </span>
-              </div>
+            <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+              <span className="text-[10px] text-slate-400 font-medium">
+                Last Ticket
+              </span>
+              <span className="text-xs font-mono font-bold text-cyan-400 truncate">
+                {lastTicket}
+              </span>
+            </div>
+            <div className="p-2 bg-slate-800/70 rounded-sm border border-slate-700/50 shadow-md flex flex-col">
+              <span className="text-[10px] text-slate-400 font-medium">
+                Balance Limit
+              </span>
+              <span className="text-xs font-mono font-bold text-emerald-400">
+                {balance}
+              </span>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      {/* Main Content Row */}
-      <div className="flex flex-wrap p-2 gap-2">
-        {/* Left Panel */}
-        <div className="rounded-sm shadow-2xl bg-gradient-to-b from-slate-100/95 to-slate-300/80 p-2 border-2 border-gray-300/50 min-h-[600px] w-full lg:max-w-[320px] sm:w-[360px] backdrop-blur-sm">
-          <div className="flex gap-3 flex-wrap sm:flex-nowrap sm:w-auto w-full lg:justify-between sm:justify-start mb-2 sm:mb-0">
-            {[
-              { key: "10-19", label: "F7 (10-19)" },
-              { key: "30-39", label: "F8 (30-39)" },
-              { key: "50-59", label: "F9 (50-59)" },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => handleColButton(tab.key)}
-                className={`px-2 py-1 rounded font-bold text-sm w-full text-white ${
-                  activeFilter === tab.key
-                    ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
-                    : "bg-gradient-to-r from-purple-500 to-pink-500"
-                } hover:from-pink-500 hover:to-purple-500 shadow-lg hover:shadow-purple-500/25 transition-all duration-300 active:scale-95 border border-purple-400/30`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Number + Checkbox Grid */}
-          <div className="grid grid-cols-3 gap-1 mb-4 mt-5">
-            {range(0, 9).map((row) =>
-              allNumbers.map((colArray, colIdx) => {
-                const num = colArray[row];
-                const color =
-                  numberBoxColors[row % numberBoxColors.length];
-                return (
-                  <div
-                    key={num}
-                    className={`relative flex items-center gap-1 px-2 py-1 ${color} hover:scale-105 transition-all duration-200 cursor-pointer`}
-                    style={{
-                      border: "2px solid #fff",
-                      borderRadius: "12px",
-                      margin: "0",
-                      boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected[row][colIdx]}
-                      onChange={() => {
-                        const checkboxNum = allNumbers[colIdx][row];
-                        const wasChecked = selected[row][colIdx];
-                        handleCheckboxClick(checkboxNum);
-                        toggle(row, colIdx);
-
-                        if (!wasChecked) {
-                          if (activeCheckbox)
-                            persistActiveNumber(activeCheckbox);
-
-                          setActiveCheckbox(checkboxNum);
-                          setActiveColGroup(null);
-
-                          setCellOverrides({});
-                          setColumnHeaders(Array(10).fill(""));
-                          setRowHeaders(Array(10).fill(""));
-
-                          loadNumberIntoUI(checkboxNum);
-                        } else {
-                          setCheckboxInputs((prev) => {
-                            const updated = { ...prev };
-                            delete updated[checkboxNum];
-                            return updated;
-                          });
-
-                          if (activeCheckbox === checkboxNum) {
-                            persistActiveNumber(checkboxNum);
-                            setActiveCheckbox(null);
-                            setActiveColGroup(null);
-                            setColumnHeaders(Array(10).fill(""));
-                            setRowHeaders(Array(10).fill(""));
-                            setCellOverrides({});
-                          }
-                        }
-                      }}
-                      className="peer appearance-none w-6 h-6 rounded bg-white border-2 border-[#4A314D] checked:bg-gradient-to-r checked:from-purple-600 checked:to-pink-600 checked:border-purple-600 flex-shrink-0 transition-all duration-200 hover:scale-110"
-                      style={{
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                      }}
-                    />
-                    <span
-                      className={`absolute left-3 top-3 text-white text-sm font-bold pointer-events-none transition-all duration-200 ${
-                        selected[row][colIdx]
-                          ? "opacity-100 scale-100"
-                          : "opacity-0 scale-50"
-                      }`}
-                    >
-                      ✓
-                    </span>
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleNumberBox(row, colIdx);
-                        setActiveCheckbox(num);
-                        setActiveColGroup(null);
-                        setActiveNumber((prev) => (prev === num ? null : num)); // toggle blue active
-                      }}
-                      className={`w-10 h-7 flex items-center justify-center font-bold text-md border-2 rounded transition-all
-                      ${activeNumber === num ? "bg-blue-600 text-white" :
-                        selectedNumbers.includes(num) ? "bg-purple-700 text-white" :
-                        "bg-white text-[#4A314D]"}`}
-
-                      style={{
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                      }}
-                    >
-                      {num}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-3 mt-6">
+    {/* Main Content Row */}
+    <div className="flex p-2 gap-2" style={{ minWidth: '1400px' }}>
+      {/* Left Panel */}
+      <div className="rounded-sm shadow-2xl bg-gradient-to-b from-slate-100/95 to-slate-300/80 p-2 border-2 border-gray-300/50 min-h-[600px] w-[320px] backdrop-blur-sm flex-shrink-0">
+        <div className="flex gap-3 mb-2">
+          {[
+            { key: "10-19", label: "F7 (10-19)" },
+            { key: "30-39", label: "F8 (30-39)" },
+            { key: "50-59", label: "F9 (50-59)" },
+          ].map((tab) => (
             <button
-              type="button"
-              onClick={handlePrint}
-              disabled={!canPrint || isPrinting}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
-                !canPrint || isPrinting
-                  ? "opacity-50 cursor-not-allowed pointer-events-none"
-                  : ""
-              }`}
+              key={tab.key}
+              onClick={() => handleColButton(tab.key)}
+              className={`px-2 py-1 rounded font-bold text-sm w-full text-white ${
+                activeFilter === tab.key
+                  ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
+                  : "bg-gradient-to-r from-purple-500 to-pink-500"
+              } hover:from-pink-500 hover:to-purple-500 shadow-lg hover:shadow-purple-500/25 transition-all duration-300 active:scale-95 border border-purple-400/30`}
             >
-              <Printer className="w-5 h-5" />
-              {isPrinting ? "Printing..." : "Print"}
+              {tab.label}
             </button>
-
-            <button
-              onClick={() => {
-                window.location.reload();
-                setCheckboxInputs({});
-                localStorage.removeItem("checkboxInputs");
-                setStoreByNum({});
-                localStorage.removeItem(LS_KEY);
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95 text-sm"
-            >
-              <RotateCcw className="w-5 h-5" />
-              Reset (F10)
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Main Table */}
-        <div className="flex-1 bg-gradient-to-b from-slate-800/70 to-slate-900/90 rounded-sm shadow-2xl border-2 border-slate-700/50 transparent-scrollbar p-4 overflow-hidden backdrop-blur-sm">
-          <div className="overflow-x-auto transparent-scrollbar">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-700/50">
-                  <th className="bg-transparent p-0"></th>
-                  {range(0, 9).map((n) => (
-                    <th
-                      key={n}
-                      className="p-2 text-center text-sm font-bold text-purple-300 bg-slate-800/30 border-r border-slate-700/30 last:border-r-0"
-                    ></th>
-                  ))}
-                  <th className="bg-transparent p-2"></th>
-                  <th className="bg-transparent p-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Column Headers */}
-                <tr>
-                  <td className="bg-transparent"></td>
-                  {range(0, 9).map((col) => (
-                    <td
-                      key={`col-header-${col}`}
-                      className="p-1 text-center border-r border-slate-700/20 last:border-r-0"
-                    >
-                      <input
-                        type="text"
-                        className="w-16 h-6 rounded bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
-                        maxLength={3}
-                        value={columnHeaders[col]}
-                        onChange={(e) =>
-                          handleColumnHeaderChange(col, e.target.value)
-                        }
-                        data-colheader="1"
-                        data-col={col}
-                        onKeyDownCapture={(e) =>
-                          handleArrowNav(e, "colHeader", 0, col)
-                        }
-                      />
-                    </td>
-                  ))}
-                  <td className="bg-transparent"></td>
-                  <td className="p-1 text-center font-bold text-yellow-400">
-                    Quantity
-                  </td>
-                  <td className="p-1 text-center font-bold text-pink-400">
-                    Amounts
-                  </td>
-                </tr>
+        {/* Number + Checkbox Grid */}
+        <div className="grid grid-cols-3 gap-1 mb-4 mt-5">
+          {range(0, 9).map((row) =>
+            allNumbers.map((colArray, colIdx) => {
+              const num = colArray[row];
+              const color =
+                numberBoxColors[row % numberBoxColors.length];
+              return (
+                <div
+                  key={num}
+                  className={`relative flex items-center gap-1 px-2 py-1 ${color} hover:scale-105 transition-all duration-200 cursor-pointer`}
+                  style={{
+                    border: "2px solid #fff",
+                    borderRadius: "12px",
+                    margin: "0",
+                    boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected[row][colIdx]}
+                    onChange={() => {
+                      const checkboxNum = allNumbers[colIdx][row];
+                      const wasChecked = selected[row][colIdx];
+                      handleCheckboxClick(checkboxNum);
+                      toggle(row, colIdx);
 
-                {/* Grid Rows */}
-                {range(0, 9).map((row) => (
-                  <tr
-                    key={row}
-                    className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors"
+                      if (!wasChecked) {
+                        if (activeCheckbox)
+                          persistActiveNumber(activeCheckbox);
+
+                        setActiveCheckbox(checkboxNum);
+                        setActiveColGroup(null);
+
+                        setCellOverrides({});
+                        setColumnHeaders(Array(10).fill(""));
+                        setRowHeaders(Array(10).fill(""));
+
+                        loadNumberIntoUI(checkboxNum);
+                      } else {
+                        setCheckboxInputs((prev) => {
+                          const updated = { ...prev };
+                          delete updated[checkboxNum];
+                          return updated;
+                        });
+
+                        if (activeCheckbox === checkboxNum) {
+                          persistActiveNumber(checkboxNum);
+                          setActiveCheckbox(null);
+                          setActiveColGroup(null);
+                          setColumnHeaders(Array(10).fill(""));
+                          setRowHeaders(Array(10).fill(""));
+                          setCellOverrides({});
+                        }
+                      }
+                    }}
+                    className="peer appearance-none w-6 h-6 rounded bg-white border-2 border-[#4A314D] checked:bg-gradient-to-r checked:from-purple-600 checked:to-pink-600 checked:border-purple-600 flex-shrink-0 transition-all duration-200 hover:scale-110"
+                    style={{
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <span
+                    className={`absolute left-3 top-3 text-white text-sm font-bold pointer-events-none transition-all duration-200 ${
+                      selected[row][colIdx]
+                        ? "opacity-100 scale-100"
+                        : "opacity-0 scale-50"
+                    }`}
                   >
-                    <td className="p-1 text-center border-r border-slate-700/20">
-                      <div className="text-xs text-white font-bold py-2"></div>
-                      <input
-                        type="text"
-                        className="w-16 h-6 rounded bg-lime-900/80 text-lime-200 border-2 border-lime-400/40 text-center font-bold shadow focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 outline-none transition-all duration-200 hover:border-lime-300"
-                        maxLength={3}
-                        value={rowHeaders[row]}
-                        onChange={(e) =>
-                          handleRowHeaderChange(row, e.target.value)
-                        }
-                        data-rowheader="1"
-                        data-row={row}
-                        onKeyDownCapture={(e) =>
-                          handleArrowNav(e, "rowHeader", row, 0)
-                        }
-                      />
-                    </td>
+                    ✓
+                  </span>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleNumberBox(row, colIdx);
+                      setActiveCheckbox(num);
+                      setActiveColGroup(null);
+                      setActiveNumber((prev) => (prev === num ? null : num));
+                    }}
+                    className={`w-10 h-7 flex items-center justify-center font-bold text-md border-2 rounded transition-all
+                    ${activeNumber === num ? "bg-blue-600 text-white" :
+                      selectedNumbers.includes(num) ? "bg-purple-700 text-white" :
+                      "bg-white text-[#4A314D]"}`}
+                    style={{
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    {num}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
 
-                    {range(0, 9).map((col) => {
-                      const idxStr = String(row * 10 + col).padStart(2, "0");
-                      const disabled = isCellDisabled(row, col);
-                      const isFPHighlighted =
-                        isFPMode &&
-                        activeFPSetIndex !== null &&
-                        FP_SETS[activeFPSetIndex].includes(idxStr);
+        {/* Buttons */}
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={handlePrint}
+            disabled={!canPrint || isPrinting}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
+              !canPrint || isPrinting
+                ? "opacity-50 cursor-not-allowed pointer-events-none"
+                : ""
+            }`}
+          >
+            <Printer className="w-5 h-5" />
+            {isPrinting ? "Printing..." : "Print"}
+          </button>
 
-                      const key = `${row}-${col}`;
-                      const cellIndex = row * 10 + col;
+          <button
+            onClick={() => {
+              window.location.reload();
+              setCheckboxInputs({});
+              localStorage.removeItem("checkboxInputs");
+              setStoreByNum({});
+              localStorage.removeItem(LS_KEY);
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95 text-sm"
+          >
+            <RotateCcw className="w-5 h-5" />
+            Reset (F10)
+          </button>
+        </div>
+      </div>
 
-                      const cellValue = (() => {
-                        if (
-                          cellOverrides[key] !== undefined &&
-                          cellOverrides[key] !== ""
-                        )
-                          return cellOverrides[key];
+      {/* Main Table */}
+      <div className="flex-1 bg-gradient-to-b from-slate-800/70 to-slate-900/90 rounded-sm shadow-2xl border-2 border-slate-700/50 transparent-scrollbar p-4 overflow-hidden backdrop-blur-sm">
+        <div className="overflow-x-auto transparent-scrollbar">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-700/50">
+                <th className="bg-transparent p-0"></th>
+                {range(0, 9).map((n) => (
+                  <th
+                    key={n}
+                    className="p-2 text-center text-sm font-bold text-purple-300 bg-slate-800/30 border-r border-slate-700/30 last:border-r-0"
+                  ></th>
+                ))}
+                <th className="bg-transparent p-2"></th>
+                <th className="bg-transparent p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Column Headers */}
+              <tr>
+                <td className="bg-transparent"></td>
+                {range(0, 9).map((col) => (
+                  <td
+                    key={`col-header-${col}`}
+                    className="p-1 text-center border-r border-slate-700/20 last:border-r-0"
+                  >
+                    <input
+                      type="text"
+                      className="w-16 h-6 rounded bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
+                      maxLength={3}
+                      value={columnHeaders[col]}
+                      onChange={(e) =>
+                        handleColumnHeaderChange(col, e.target.value)
+                      }
+                      data-colheader="1"
+                      data-col={col}
+                      onKeyDownCapture={(e) =>
+                        handleArrowNav(e, "colHeader", 0, col)
+                      }
+                    />
+                  </td>
+                ))}
+                <td className="bg-transparent"></td>
+                <td className="p-1 text-center font-bold text-yellow-400">
+                  Quantity
+                </td>
+                <td className="p-1 text-center font-bold text-pink-400">
+                  Amounts
+                </td>
+              </tr>
 
-                        const headerFallback = (rows, cols) => {
-                          if (disabled) return "";
-                          const rHas = rows[row] !== "" && rows[row] != null;
-                          const cHas = cols[col] !== "" && cols[col] != null;
-                          const rVal = parseInt(rows[row] || "0", 10);
-                          const cVal = parseInt(cols[col] || "0", 10);
-                          if (rHas && cHas) return String(rVal + cVal);
-                          if (cHas) return String(cVal);
-                          if (rHas) return String(rVal);
-                          return "";
-                        };
+              {/* Grid Rows */}
+              {range(0, 9).map((row) => (
+                <tr
+                  key={row}
+                  className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors"
+                >
+                  <td className="p-1 text-center border-r border-slate-700/20">
+                    <div className="text-xs text-white font-bold py-2"></div>
+                    <input
+                      type="text"
+                      className="w-16 h-6 rounded bg-lime-900/80 text-lime-200 border-2 border-lime-400/40 text-center font-bold shadow focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 outline-none transition-all duration-200 hover:border-lime-300"
+                      maxLength={3}
+                      value={rowHeaders[row]}
+                      onChange={(e) =>
+                        handleRowHeaderChange(row, e.target.value)
+                      }
+                      data-rowheader="1"
+                      data-row={row}
+                      onKeyDownCapture={(e) =>
+                        handleArrowNav(e, "rowHeader", row, 0)
+                      }
+                    />
+                  </td>
 
-                        const addHeaders = (manualStr, rows, cols) => {
-                          const rHas =
-                            rows[row] !== "" && rows[row] != null;
-                          const cHas =
-                            cols[col] !== "" && cols[col] != null;
-                          const rVal = parseInt(rows[row] || "0", 10);
-                          const cVal = parseInt(cols[col] || "0", 10);
-                          const headerSum =
-                            (rHas ? rVal : 0) + (cHas ? cVal : 0);
-                          const manual = parseInt(manualStr || "0", 10);
-                          return String(manual + headerSum);
-                        };
+                  {range(0, 9).map((col) => {
+                    const idxStr = String(row * 10 + col).padStart(2, "0");
+                    const disabled = isCellDisabled(row, col);
+                    const isFPHighlighted =
+                      isFPMode &&
+                      activeFPSetIndex !== null &&
+                      FP_SETS[activeFPSetIndex].includes(idxStr);
 
-                        if (activeCheckbox) {
-                          const slot = storeByNum[activeCheckbox];
-                          const effRows =
-                            slot?.rowHeader ?? rowHeaders;
-                          const effCols =
-                            slot?.columnHeader ??
-                            columnHeaders;
+                    const key = `${row}-${col}`;
+                    const cellIndex = row * 10 + col;
 
-                          const perCell =
-                            checkboxInputs[activeCheckbox];
-                          const manual = perCell
-                            ? perCell[cellIndex]
-                            : undefined;
+                    const cellValue = (() => {
+                      if (
+                        cellOverrides[key] !== undefined &&
+                        cellOverrides[key] !== ""
+                      )
+                        return cellOverrides[key];
 
-                          if (manual !== undefined && manual !== "") {
-                            return addHeaders(
-                              manual,
-                              effRows,
-                              effCols
-                            );
-                          }
+                      const headerFallback = (rows, cols) => {
+                        if (disabled) return "";
+                        const rHas = rows[row] !== "" && rows[row] != null;
+                        const cHas = cols[col] !== "" && cols[col] != null;
+                        const rVal = parseInt(rows[row] || "0", 10);
+                        const cVal = parseInt(cols[col] || "0", 10);
+                        if (rHas && cHas) return String(rVal + cVal);
+                        if (cHas) return String(cVal);
+                        if (rHas) return String(rVal);
+                        return "";
+                      };
 
-                          const hv = headerFallback(
+                      const addHeaders = (manualStr, rows, cols) => {
+                        const rHas =
+                          rows[row] !== "" && rows[row] != null;
+                        const cHas =
+                          cols[col] !== "" && cols[col] != null;
+                        const rVal = parseInt(rows[row] || "0", 10);
+                        const cVal = parseInt(cols[col] || "0", 10);
+                        const headerSum =
+                          (rHas ? rVal : 0) + (cHas ? cVal : 0);
+                        const manual = parseInt(manualStr || "0", 10);
+                        return String(manual + headerSum);
+                      };
+
+                      if (activeCheckbox) {
+                        const slot = storeByNum[activeCheckbox];
+                        const effRows =
+                          slot?.rowHeader ?? rowHeaders;
+                        const effCols =
+                          slot?.columnHeader ??
+                          columnHeaders;
+
+                        const perCell =
+                          checkboxInputs[activeCheckbox];
+                        const manual = perCell
+                          ? perCell[cellIndex]
+                          : undefined;
+
+                        if (manual !== undefined && manual !== "") {
+                          return addHeaders(
+                            manual,
                             effRows,
                             effCols
                           );
-                          if (hv !== "") return hv;
                         }
 
-                        if (activeColGroup) {
-                          const nums = getNumsForGroup(
-                            activeColGroup
-                          );
+                        const hv = headerFallback(
+                          effRows,
+                          effCols
+                        );
+                        if (hv !== "") return hv;
+                      }
 
-                          if (nums.length) {
-                            for (const n of nums) {
-                              const m =
-                                checkboxInputs[n]?.[
-                                  cellIndex
-                                ];
-                              if (
-                                m !== undefined &&
-                                m !== ""
-                              ) {
-                                return addHeaders(
-                                  m,
-                                  rowHeaders,
-                                  columnHeaders
-                                );
-                              }
+                      if (activeColGroup) {
+                        const nums = getNumsForGroup(
+                          activeColGroup
+                        );
+
+                        if (nums.length) {
+                          for (const n of nums) {
+                            const m =
+                              checkboxInputs[n]?.[
+                                cellIndex
+                              ];
+                            if (
+                              m !== undefined &&
+                              m !== ""
+                            ) {
+                              return addHeaders(
+                                m,
+                                rowHeaders,
+                                columnHeaders
+                              );
                             }
                           }
-
-                          const hv = headerFallback(
-                            rowHeaders,
-                            columnHeaders
-                          );
-                          if (hv !== "") return hv;
                         }
 
-                        return "";
-                      })();
+                        const hv = headerFallback(
+                          rowHeaders,
+                          columnHeaders
+                        );
+                        if (hv !== "") return hv;
+                      }
 
-                      return (
-                        <td
-                          key={col}
-                          className="p-1 text-center border-r border-slate-700/20 last:border-r-0"
-                        >
-                          <div className="text-[11px] text-white font-bold">
-                            {idxStr}
-                          </div>
-<input
-  type="text"
-  data-index={idxStr}
-  data-grid-cell="1"
-  data-row={row}
-  data-col={col}
-  onKeyDownCapture={(e) => handleArrowNav(e, "grid", row, col)}
-  className={`
-    w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40
-    text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2
-    focus:ring-pink-500/20 outline-none transition-all duration-200
-    hover:border-purple-400
-    ${isFPHighlighted ? "fp-highlight" : ""}
-    ${disabled ? "bg-gray-200 text-transparent cursor-not-allowed opacity-70" : ""}
-  `}
-  maxLength={3}
-  value={cellValue}
-  disabled={disabled}
-  onClick={() => {
-    if (isFPMode) {
-      const setIdx = getFPSetIndexForNumber(idxStr);
-      if (setIdx !== -1) {
-        setActiveFPSetIndex(setIdx);
-        highlightFPSet(setIdx);
-      } else {
-        setActiveFPSetIndex(null);
-        clearFPHighlights();
-      }
-    }
-  }}
-onChange={(e) => {
-  const input = e.target.value;
-  if (!/^\d{0,3}$/.test(input)) return;
-  const cellKey = idxStr;
+                      return "";
+                    })();
 
-  // --- UNIVERSAL VALUE ASSIGNMENT LOGIC ---
-  if (activeNumber) {
-    // 🔵 If a number box is blue-selected — assign only to that one
-    assignValueToNumber(activeNumber, input, cellKey);
-  } else if (selectedNumbers.length > 0) {
-    // ✅ If user manually checked boxes — assign to all selected
-    selectedNumbers.forEach((num) => assignValueToNumber(num, input, cellKey));
-  } else if (activeColGroup) {
-    // 🟣 F7/F8/F9 groups
-    const nums = getNumsForGroup(activeColGroup);
-    nums.forEach((num) => assignValueToNumber(num, input, cellKey));
-  }
-  // --- END UNIVERSAL VALUE ASSIGNMENT LOGIC ---
-
-  // --- Keep your existing override logic below ---
-  const updateOverride = (key, value) => {
-    setCellOverrides((prev) => {
-      const updated = { ...prev };
-      if (value === "" || value == null) delete updated[key];
-      else updated[key] = value;
-      return updated;
-    });
-  };
-
-  const numStrLocal = idxStr;
-
-  if (
-    isFPMode &&
-    activeFPSetIndex !== null &&
-    FP_SETS[activeFPSetIndex].includes(numStrLocal)
-  ) {
-    FP_SETS[activeFPSetIndex].forEach((setNum) => {
-      const r = Math.floor(parseInt(setNum, 10) / 10);
-      const c = parseInt(setNum, 10) % 10;
-      updateOverride(`${r}-${c}`, input);
-    });
-  } else if (activeColGroup) {
-    const nums = getNumsForGroup(activeColGroup);
-    setCheckboxInputs((prev) => {
-      const updated = { ...prev };
-      nums.forEach((n) => {
-        if (!updated[n]) updated[n] = {};
-        if (input === "" || input == null) delete updated[n][cellIndex];
-        else updated[n][cellIndex] = input;
-      });
-      return updated;
-    });
-
-    const idxKey = idxStr;
-    setStoreByNum((prev) => {
-      const next = { ...prev };
-      nums.forEach((n) => {
-        const slot = ensureSlot(n);
-        const t = { ...(slot.tickets || {}) };
-        const rv = slot.rowHeader?.[row] ?? rowHeaders[row] ?? "";
-        const cv = slot.columnHeader?.[col] ?? columnHeaders[col] ?? "";
-        const rNum = parseInt(rv || "0", 10);
-        const cNum = parseInt(cv || "0", 10);
-        const headerSum = (rv ? rNum : 0) + (cv ? cNum : 0);
-        if (input === "" || input == null) delete t[`${n}-${idxKey}`];
-        else {
-          const manual = parseInt(input || "0", 10);
-          t[`${n}-${idxKey}`] = String(manual + headerSum);
-        }
-        next[n] = { ...slot, tickets: t };
-      });
-      return next;
-    });
-
-    if (input === "") {
-      setCellOverrides((prev) => {
-        const copy = { ...prev };
-        delete copy[key];
-        return copy;
-      });
-    }
-  } else if (activeCheckbox) {
-    setCheckboxInputs((prev) => {
-      const updated = { ...prev };
-      if (!updated[activeCheckbox]) updated[activeCheckbox] = {};
-      if (input === "" || input == null) delete updated[activeCheckbox][cellIndex];
-      else updated[activeCheckbox][cellIndex] = input;
-      return updated;
-    });
-
-    const idxKey = idxStr;
-    setStoreByNum((prev) => {
-      const slot = ensureSlot(activeCheckbox);
-      const t = { ...(slot.tickets || {}) };
-      const rv = slot.rowHeader?.[row] ?? rowHeaders[row] ?? "";
-      const cv = slot.columnHeader?.[col] ?? columnHeaders[col] ?? "";
-      const rNum = parseInt(rv || "0", 10);
-      const cNum = parseInt(cv || "0", 10);
-      const headerSum = (rv ? rNum : 0) + (cv ? cNum : 0);
-      if (input === "" || input == null) delete t[`${activeCheckbox}-${idxKey}`];
-      else {
-        const manual = parseInt(input || "0", 10);
-        t[`${activeCheckbox}-${idxKey}`] = String(manual + headerSum);
-      }
-      return { ...prev, [activeCheckbox]: { ...slot, tickets: t } };
-    });
-
-    if (input === "") {
-      setCellOverrides((prev) => {
-        const copy = { ...prev };
-        delete copy[key];
-        return copy;
-      });
-    }
-  } else {
-    updateOverride(key, input);
-  }
-}}
-
-/>
-
-                        </td>
-                      );
-                    })}
-
-                    <td className="bg-transparent"></td>
-                    <td className="p-1 text-center">
-                      <div className="w-16 h-8 rounded-sm bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
-                        {updatedQuantity[row]}
-                      </div>
-                    </td>
-                    <td className="p-1 text-center">
-                      <div className="w-16 h-8 rounded-sm bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
-                        {updatedPoints[row]}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-
-                {/* Totals Row + Ticket actions */}
-                <tr className="bg-slate-800/40 border-t-2 border-purple-500/50">
-                  <td
-                    colSpan={12}
-                    className="p-1 text-center font-bold text-purple-300"
-                  >
-                    <div className="flex items-center mt-1 gap-3">
-                      <div className="flex-1">
+                    return (
+                      <td
+                        key={col}
+                        className="p-1 text-center border-r border-slate-700/20 last:border-r-0"
+                      >
+                        <div className="text-[11px] text-white font-bold">
+                          {idxStr}
+                        </div>
                         <input
                           type="text"
-                          placeholder="Transaction No/Bar Code"
-                          value={transactionInput}
-                          onChange={(e) =>
-                            setTransactionInput(e.target.value)
-                          }
-                          className="w-full py-1 px-5 rounded-sm bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
-                        />
-                      </div>
-                      <div className="flex-none flex gap-2">
-                        <button
-                          className="flex items-center gap-3 px-6 rounded-sm font-bold h-10 text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
-                          disabled={!isClaimable}
-                          onClick={handleClaimTicket}
-                        >
-                          <TrendingUp className="w-5 h-5" />
-                          Claim Ticket
-                        </button>
+                          data-index={idxStr}
+                          data-grid-cell="1"
+                          data-row={row}
+                          data-col={col}
+                          onKeyDownCapture={(e) => handleArrowNav(e, "grid", row, col)}
+                          className={`
+                            w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40
+                            text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2
+                            focus:ring-pink-500/20 outline-none transition-all duration-200
+                            hover:border-purple-400
+                            ${isFPHighlighted ? "fp-highlight" : ""}
+                            ${disabled ? "bg-gray-200 text-transparent cursor-not-allowed opacity-70" : ""}
+                          `}
+                          maxLength={3}
+                          value={cellValue}
+                          disabled={disabled}
+                          onClick={() => {
+                            if (isFPMode) {
+                              const setIdx = getFPSetIndexForNumber(idxStr);
+                              if (setIdx !== -1) {
+                                setActiveFPSetIndex(setIdx);
+                                highlightFPSet(setIdx);
+                              } else {
+                                setActiveFPSetIndex(null);
+                                clearFPHighlights();
+                              }
+                            }
+                          }}
+                          onChange={(e) => {
+                            const input = e.target.value;
+                            if (!/^\d{0,3}$/.test(input)) return;
+                            const cellKey = idxStr;
 
-                        <button
-                          className="flex items-center gap-3 px-6 py-1 rounded-sm font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
-                          onClick={() =>
-                            setAdvanceModalOpen(true)
-                          }
-                        >
-                          <Zap className="w-5 h-5" />
-                          Advance Draw
-                        </button>
-                      </div>
+                            // --- UNIVERSAL VALUE ASSIGNMENT LOGIC ---
+                            if (activeNumber) {
+                              assignValueToNumber(activeNumber, input, cellKey);
+                            } else if (selectedNumbers.length > 0) {
+                              selectedNumbers.forEach((num) => assignValueToNumber(num, input, cellKey));
+                            } else if (activeColGroup) {
+                              const nums = getNumsForGroup(activeColGroup);
+                              nums.forEach((num) => assignValueToNumber(num, input, cellKey));
+                            }
+
+                            const updateOverride = (key, value) => {
+                              setCellOverrides((prev) => {
+                                const updated = { ...prev };
+                                if (value === "" || value == null) delete updated[key];
+                                else updated[key] = value;
+                                return updated;
+                              });
+                            };
+
+                            const numStrLocal = idxStr;
+
+                            if (
+                              isFPMode &&
+                              activeFPSetIndex !== null &&
+                              FP_SETS[activeFPSetIndex].includes(numStrLocal)
+                            ) {
+                              FP_SETS[activeFPSetIndex].forEach((setNum) => {
+                                const r = Math.floor(parseInt(setNum, 10) / 10);
+                                const c = parseInt(setNum, 10) % 10;
+                                updateOverride(`${r}-${c}`, input);
+                              });
+                            } else if (activeColGroup) {
+                              const nums = getNumsForGroup(activeColGroup);
+                              setCheckboxInputs((prev) => {
+                                const updated = { ...prev };
+                                nums.forEach((n) => {
+                                  if (!updated[n]) updated[n] = {};
+                                  if (input === "" || input == null) delete updated[n][cellIndex];
+                                  else updated[n][cellIndex] = input;
+                                });
+                                return updated;
+                              });
+
+                              const idxKey = idxStr;
+                              setStoreByNum((prev) => {
+                                const next = { ...prev };
+                                nums.forEach((n) => {
+                                  const slot = ensureSlot(n);
+                                  const t = { ...(slot.tickets || {}) };
+                                  const rv = slot.rowHeader?.[row] ?? rowHeaders[row] ?? "";
+                                  const cv = slot.columnHeader?.[col] ?? columnHeaders[col] ?? "";
+                                  const rNum = parseInt(rv || "0", 10);
+                                  const cNum = parseInt(cv || "0", 10);
+                                  const headerSum = (rv ? rNum : 0) + (cv ? cNum : 0);
+                                  if (input === "" || input == null) delete t[`${n}-${idxKey}`];
+                                  else {
+                                    const manual = parseInt(input || "0", 10);
+                                    t[`${n}-${idxKey}`] = String(manual + headerSum);
+                                  }
+                                  next[n] = { ...slot, tickets: t };
+                                });
+                                return next;
+                              });
+
+                              if (input === "") {
+                                setCellOverrides((prev) => {
+                                  const copy = { ...prev };
+                                  delete copy[key];
+                                  return copy;
+                                });
+                              }
+                            } else if (activeCheckbox) {
+                              setCheckboxInputs((prev) => {
+                                const updated = { ...prev };
+                                if (!updated[activeCheckbox]) updated[activeCheckbox] = {};
+                                if (input === "" || input == null) delete updated[activeCheckbox][cellIndex];
+                                else updated[activeCheckbox][cellIndex] = input;
+                                return updated;
+                              });
+
+                              const idxKey = idxStr;
+                              setStoreByNum((prev) => {
+                                const slot = ensureSlot(activeCheckbox);
+                                const t = { ...(slot.tickets || {}) };
+                                const rv = slot.rowHeader?.[row] ?? rowHeaders[row] ?? "";
+                                const cv = slot.columnHeader?.[col] ?? columnHeaders[col] ?? "";
+                                const rNum = parseInt(rv || "0", 10);
+                                const cNum = parseInt(cv || "0", 10);
+                                const headerSum = (rv ? rNum : 0) + (cv ? cNum : 0);
+                                if (input === "" || input == null) delete t[`${activeCheckbox}-${idxKey}`];
+                                else {
+                                  const manual = parseInt(input || "0", 10);
+                                  t[`${activeCheckbox}-${idxKey}`] = String(manual + headerSum);
+                                }
+                                return { ...prev, [activeCheckbox]: { ...slot, tickets: t } };
+                              });
+
+                              if (input === "") {
+                                setCellOverrides((prev) => {
+                                  const copy = { ...prev };
+                                  delete copy[key];
+                                  return copy;
+                                });
+                              }
+                            } else {
+                              updateOverride(key, input);
+                            }
+                          }}
+                        />
+                      </td>
+                    );
+                  })}
+
+                  <td className="bg-transparent"></td>
+                  <td className="p-1 text-center">
+                    <div className="w-16 h-8 rounded-sm bg-gradient-to-r from-yellow-200 to-yellow-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-yellow-400">
+                      {updatedQuantity[row]}
                     </div>
                   </td>
                   <td className="p-1 text-center">
-                    <div className="font-extrabold text-lg text-yellow-400 bg-slate-900/50 px-3 py-2 rounded-sm border border-yellow-500/50">
-                      {displayTotalQuantity}
-                    </div>
-                  </td>
-                  <td className="p-1 text-center">
-                    <div className="font-extrabold text-lg text-pink-400 bg-slate-900/50 px-3 py-2 rounded-sm border border-pink-500/50">
-                      {displayTotalPoints}
+                    <div className="w-16 h-8 rounded-sm bg-gradient-to-r from-pink-200 to-pink-300 text-slate-900 font-bold flex items-center justify-center mx-auto shadow-lg border border-pink-400">
+                      {updatedPoints[row]}
                     </div>
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
+              ))}
+
+              {/* Totals Row + Ticket actions */}
+              <tr className="bg-slate-800/40 border-t-2 border-purple-500/50">
+                <td
+                  colSpan={12}
+                  className="p-1 text-center font-bold text-purple-300"
+                >
+                  <div className="flex items-center mt-1 gap-3">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Transaction No/Bar Code"
+                        value={transactionInput}
+                        onChange={(e) =>
+                          setTransactionInput(e.target.value)
+                        }
+                        className="w-full py-1 px-5 rounded-sm bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
+                      />
+                    </div>
+                    <div className="flex-none flex gap-2">
+                      <button
+                        className="flex items-center gap-3 px-6 rounded-sm font-bold h-10 text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!isClaimable}
+                        onClick={handleClaimTicket}
+                      >
+                        <TrendingUp className="w-5 h-5" />
+                        Claim Ticket
+                      </button>
+
+                      <button
+                        className="flex items-center gap-3 px-6 py-1 rounded-sm font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
+                        onClick={() =>
+                          setAdvanceModalOpen(true)
+                        }
+                      >
+                        <Zap className="w-5 h-5" />
+                        Advance Draw
+                      </button>
+                    </div>
+                  </div>
+                </td>
+                <td className="p-1 text-center">
+                 <div className="font-extrabold text-lg text-yellow-400 bg-slate-900/50 px-3 py-2 rounded-sm border border-yellow-500/50">
+                    {displayTotalQuantity}
+                  </div>
+                </td>
+                <td className="p-1 text-center">
+                  <div className="font-extrabold text-lg text-pink-400 bg-slate-900/50 px-3 py-2 rounded-sm border border-pink-500/50">
+                    {displayTotalPoints}
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <AdvanceDrawModal
-        open={advanceModalOpen}
-        onClose={() => setAdvanceModalOpen(false)}
-        selectedTimes={advanceDrawTimes}
-        setSelectedTimes={setAdvanceDrawTimes}
-        onConfirm={(selected) => setAdvanceDrawTimes(selected)}
-      />
-
-      <style jsx>{`
-        .fp-highlight {
-          background-color: rgba(34, 197, 94, 0.3) !important;
-          border: 2px solid #22c55e !important;
-          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5) !important;
-        }
-      `}</style>
-
-      <TicketStatusModal
-        open={ticketStatusModalOpen}
-        onClose={() => setTicketStatusModalOpen(false)}
-        statusData={ticketStatusData}
-      />
-
-      <Navbar />
     </div>
-  );
+
+    <AdvanceDrawModal
+      open={advanceModalOpen}
+      onClose={() => setAdvanceModalOpen(false)}
+      selectedTimes={advanceDrawTimes}
+      setSelectedTimes={setAdvanceDrawTimes}
+      onConfirm={(selected) => setAdvanceDrawTimes(selected)}
+    />
+
+    <style jsx>{`
+      .fp-highlight {
+        background-color: rgba(34, 197, 94, 0.3) !important;
+        border: 2px solid #22c55e !important;
+        box-shadow: 0 0 8px rgba(34, 197, 94, 0.5) !important;
+      }
+    `}</style>
+
+    <TicketStatusModal
+      open={ticketStatusModalOpen}
+      onClose={() => setTicketStatusModalOpen(false)}
+      statusData={ticketStatusData}
+    />
+
+    <Navbar />
+  </div>
+);
 }
