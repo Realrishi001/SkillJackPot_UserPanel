@@ -135,7 +135,7 @@ export default function Page() {
   const [activeFilter, setActiveFilter] = useState(null);
 
   // 👇 This now only controls input disabling, not checkboxes
-  const [activeTypeFilter, setActiveTypeFilter] = useState("all");
+  const [activeTypeFilter, setActiveTypeFilter] = useState(null);
   const [activeColFilter, setActiveColFilter] = useState(null);
 
   const [gameIdBox, setGameIdBox] = useState("-");
@@ -552,6 +552,11 @@ function assignValueToNumber(num, value, cellKey) {
 
 const handleCheckTicketStatus = async (ticketNumber) => {
   try {
+    if (!ticketNumber?.trim()) {
+      toast.error("Please enter or scan a Ticket ID.");
+      return;
+    }
+
     const res = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/is-claim-tickets`,
       { ticketId: ticketNumber.trim() }
@@ -559,11 +564,22 @@ const handleCheckTicketStatus = async (ticketNumber) => {
 
     const data = res.data;
 
+    // 🚫 Ticket Not Found / Invalid
     if (data.status === "error" || res.status === 404) {
-      toast.error("⚠️ Invalid Ticket ID");
+      setTicketStatusData({
+        status: "error",
+        ticketId: ticketNumber,
+        drawTime: "-",
+        drawDate: "-",
+        prizeAmount: 0,
+        claimedDate: null,
+        claimedTime: null,
+      });
+      setTicketStatusModalOpen(true);
       return;
     }
 
+    // ✅ Build Status Data for All Valid Responses
     setTicketStatusData({
       status: data.status,
       ticketId: ticketNumber,
@@ -583,7 +599,18 @@ const handleCheckTicketStatus = async (ticketNumber) => {
     setTicketStatusModalOpen(true);
   } catch (error) {
     console.error("❌ Error checking ticket:", error);
-    toast.error("Something went wrong while checking the ticket.");
+
+    // 🧩 Handle network or unexpected errors gracefully in modal
+    setTicketStatusData({
+      status: "error",
+      ticketId: ticketNumber,
+      drawTime: "-",
+      drawDate: "-",
+      prizeAmount: 0,
+      claimedDate: null,
+      claimedTime: null,
+    });
+    setTicketStatusModalOpen(true);
   }
 };
 
@@ -1179,17 +1206,19 @@ const handleClaimTicket = async () => {
     pdf.text(`Total Amount : ${data.totalPoints}`, 5, yPos);
     yPos += 8;
 
-    const barcodeValue = `${data.ticketNumber}`;
+// ✅ Use only the backend-generated ticket ID for the barcode
+const barcodeValue = String(ticketId);
 
-    const canvas = document.createElement("canvas");
-    JsBarcode(canvas, barcodeValue, {
-      format: "CODE128",
-      width: 2,
-      height: 50,
-      displayValue: true,
-      fontSize: 14,
-      margin: 5,
-    });
+const canvas = document.createElement("canvas");
+JsBarcode(canvas, barcodeValue, {
+  format: "CODE128",
+  width: 2,
+  height: 50,
+  displayValue: true,  // will show the ticket ID below the bars
+  fontSize: 14,
+  margin: 5,
+});
+
     const barcodeImage = canvas.toDataURL("image/png");
     pdf.addImage(barcodeImage, "PNG", 10, yPos, 60, 20);
 
@@ -1421,64 +1450,102 @@ return (
     {/* Header */}
     <div className="w-full flex items-center justify-between gap-4 px-4" style={{ minWidth: '1400px' }}>
       {/* LEFT: Filters */}
-      <div className="w-auto flex flex-col gap-3">
-        <div className="flex gap-2 text-sm">
-          {[
-            {
-              label: "All",
-              value: "all",
-              activeClass: "from-purple-600 to-pink-600",
-            },
-            {
-              label: "Even",
-              value: "even",
-              activeClass: "from-blue-600 to-indigo-600",
-            },
-            {
-              label: "Odd",
-              value: "odd",
-              activeClass: "from-rose-600 to-red-500",
-            },
-          ].map((btn) => (
-            <button
-              key={btn.value}
-              onClick={() => {
-                const turningOff = activeTypeFilter === btn.value;
-                if (turningOff) {
-                  setActiveTypeFilter(null);
-                } else {
-                  setActiveTypeFilter(btn.value);
-                }
-              }}
-              className={`px-1 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
-                activeTypeFilter === btn.value
-                  ? `text-white bg-gradient-to-r ${btn.activeClass} shadow-lg`
-                  : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
-              }`}
-            >
-              {btn.label}
-            </button>
-          ))}
+<div className="w-auto flex flex-col gap-3">
+  <div className="flex gap-2 text-sm">
+    {[
+      {
+        label: "All",
+        value: "all",
+        activeClass: "from-purple-600 to-pink-600",
+      },
+      {
+        label: "Even",
+        value: "even",
+        activeClass: "from-blue-600 to-indigo-600",
+      },
+      {
+        label: "Odd",
+        value: "odd",
+        activeClass: "from-rose-600 to-red-500",
+      },
+    ].map((btn) => (
+      <button
+        key={btn.value}
+        onClick={() => {
+          const turningOff = activeTypeFilter === btn.value;
 
-          {/* FP Mode */}
-          <button
-            onClick={() => {
-              setIsFPMode(!isFPMode);
-              if (isFPMode) {
-                clearFPHighlights();
-                setActiveFPSetIndex(null);
+          if (turningOff) {
+            // 🔴 Turn off active type
+            setActiveTypeFilter(null);
+
+            // 🧹 If "All" was active → uncheck all boxes and reset totals
+            if (btn.value === "all") {
+              setSelected((prev) => prev.map((row) => row.map(() => false)));
+              setQuantities(Array(10).fill(0));
+              setPoints(Array(10).fill(0));
+              setActiveCheckbox(null);
+              setActiveColGroup(null);
+              setSelectedNumbers([]);
+              setActiveNumber(null);
+            }
+          } else {
+            // 🟢 Activate new type filter
+            setActiveTypeFilter(btn.value);
+
+            // ✅ “All” button logic: select all checkboxes & numbers
+            if (btn.value === "all") {
+              // Persist current number if active
+              if (activeCheckbox) persistActiveNumber(activeCheckbox);
+
+              // Select every checkbox using existing logic
+              for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 3; c++) {
+                  if (!selected[r][c]) {
+                    const num = allNumbers[c][r];
+                    handleCheckboxClick(num); // adds number to selectedNumbers
+                    toggle(r, c); // updates selected + quantities + points
+                  }
+                }
               }
-            }}
-            className={`px-2 py-1 text-sm rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
-              isFPMode
-                ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
-                : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
-            }`}
-          >
-            FP Mode
-          </button>
-        </div>
-      </div>
+
+              // Mark ALL as active group (for consistent UI logic)
+              setActiveColGroup("ALL");
+
+              // Ensure every checkbox visually checked
+              setSelected(Array(10).fill(null).map(() => Array(3).fill(true)));
+            }
+          }
+        }}
+        className={`px-1 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+          activeTypeFilter === btn.value
+            ? `text-white bg-gradient-to-r ${btn.activeClass} shadow-lg`
+            : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
+        }`}
+      >
+        {btn.label}
+      </button>
+    ))}
+
+    {/* FP Mode */}
+    <button
+      onClick={() => {
+        setIsFPMode(!isFPMode);
+        if (isFPMode) {
+          clearFPHighlights();
+          setActiveFPSetIndex(null);
+        }
+      }}
+      className={`px-2 py-1 text-sm rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+        isFPMode
+          ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
+          : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
+      }`}
+    >
+      FP Mode
+    </button>
+  </div>
+</div>
+
 
       {/* CENTER: Timer & Draw */}
       <div className="flex-1 flex items-center justify-between gap-4">
