@@ -127,7 +127,6 @@ const Page = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <Navbar />
       <div className="max-w-7xl mx-auto pt-6 px-6">
         <Link
           href="/dashboard"
