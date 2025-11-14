@@ -161,6 +161,9 @@ export default function Page() {
   const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
   const [advanceDrawTimes, setAdvanceDrawTimes] = useState([]);
 
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockTill, setBlockTill] = useState(null);
+
   const COLS = 10,
     ROWS = 10;
 
@@ -186,6 +189,42 @@ export default function Page() {
 
   const LS_KEY = "sjTicketsV1";
   const [storeByNum, setStoreByNum] = useState({});
+
+  useEffect(() => {
+  async function checkBlockStatus() {
+    const adminId = getLoginIdFromToken();
+    if (!adminId) return;
+
+    try {
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/check-blocked`,
+        { adminId }
+      );
+
+      const data = res.data?.data;
+
+      if (data?.blockStatus === true) {
+        setIsBlocked(true);
+        setBlockTill(data.blockTill);
+
+        toast.error(
+          `🚫 You are blocked until ${new Date(data.blockTill).toLocaleString()}`,
+          {
+            duration: Infinity, // stays forever
+            position: "top-right",
+          }
+        );
+      } else {
+        setIsBlocked(false);
+      }
+    } catch (err) {
+      console.error("Block status error:", err);
+    }
+  }
+
+  checkBlockStatus();
+}, []);
+
 
   useEffect(() => {
     try {
@@ -566,6 +605,7 @@ const handleCheckTicketStatus = async (ticketNumber) => {
 
     // 🚫 Ticket Not Found / Invalid
     if (data.status === "error" || res.status === 404) {
+      setIsClaimable(false);
       setTicketStatusData({
         status: "error",
         ticketId: ticketNumber,
@@ -579,7 +619,10 @@ const handleCheckTicketStatus = async (ticketNumber) => {
       return;
     }
 
-    // ✅ Build Status Data for All Valid Responses
+    // ✅ Default: disable claim unless explicitly winner
+    setIsClaimable(false);
+
+    // ✅ Build Status Data for all valid responses
     setTicketStatusData({
       status: data.status,
       ticketId: ticketNumber,
@@ -587,7 +630,8 @@ const handleCheckTicketStatus = async (ticketNumber) => {
       drawDate: data.drawDate || "-",
       prizeAmount:
         data.status === "winner"
-          ? data.winningTickets?.reduce(
+          ? data.matches?.reduce((sum, m) => sum + (m.payout || 0), 0) ||
+            data.winningTickets?.reduce(
               (sum, t) => sum + (t.totalWinningValue || 0),
               0
             )
@@ -596,11 +640,23 @@ const handleCheckTicketStatus = async (ticketNumber) => {
       claimedTime: data.claimedDetails?.claimedTime || null,
     });
 
+    // ✅ Enable claim button only for winners
+    if (data.status === "winner") {
+      setIsClaimable(true);
+      toast.success("🎉 This is a winning ticket! You can now claim it.");
+    } else if (data.status === "already_claimed") {
+      toast.error("⚠️ This ticket has already been claimed.");
+    } else if (data.status === "no_win" || data.status === "no_winning") {
+      toast.error("❌ This ticket has no winning numbers.");
+    } else if (data.status === "no_winning_data" || data.status === "no_match") {
+      toast("ℹ️ No winning data or draw declared yet.", { icon: "ℹ️" });
+    }
+
     setTicketStatusModalOpen(true);
   } catch (error) {
     console.error("❌ Error checking ticket:", error);
 
-    // 🧩 Handle network or unexpected errors gracefully in modal
+    setIsClaimable(false); // always disable on error
     setTicketStatusData({
       status: "error",
       ticketId: ticketNumber,
@@ -613,6 +669,7 @@ const handleCheckTicketStatus = async (ticketNumber) => {
     setTicketStatusModalOpen(true);
   }
 };
+
 
 
 const handleClaimTicket = async () => {
@@ -631,115 +688,78 @@ const handleClaimTicket = async () => {
 
     console.log("🎯 Claim API Response:", data);
 
-    // Case 1️⃣: Already claimed
+    // 1️⃣ Already Claimed
     if (data.status === "already_claimed") {
-      setTicketStatusData({
-        title: "⚠️ Ticket Already Claimed",
-        message: "This winning ticket has already been claimed.",
-        isWinner: true,
-        isClaimed: true,
-        matches: data.matches || [],
-      });
+      toast.error("⚠️ This ticket has already been claimed.");
       setIsClaimable(false);
-      setTicketStatusModalOpen(true);
       return;
     }
 
-    // Case 2️⃣: No win
-    if (data.status === "no_win") {
-      setTicketStatusData({
-        title: "❌ Not a Winning Ticket",
-        message: "This ticket has no winning numbers.",
-        isWinner: false,
-        isClaimed: false,
-      });
+    // 2️⃣ No Win
+    if (data.status === "no_win" || data.status === "no_winning") {
+      toast.error("❌ This ticket has no winning numbers.");
       setIsClaimable(false);
-      setTicketStatusModalOpen(true);
       return;
     }
 
-    // Case 3️⃣: No winning data available (like date missing)
-    if (data.status === "no_winning_data") {
-      setTicketStatusData({
-        title: "⚠️ No Winning Data Available",
-        message:
-          "No winning numbers were declared for this draw date or draw time.",
-        isWinner: false,
-        isClaimed: false,
-      });
-      setTicketStatusModalOpen(true);
+    // 3️⃣ No Winning Data
+    if (data.status === "no_winning_data" || data.status === "no_match") {
+      toast("ℹ️ No winning data declared for this draw.", { icon: "ℹ️" });
+      setIsClaimable(false);
       return;
     }
 
-    // Case 4️⃣: Ticket not found
+    // 4️⃣ Ticket Not Found
     if (data.status === "error" && data.message === "Ticket not found") {
-      setTicketStatusData({
-        title: "🚫 Ticket Not Found",
-        message: "The ticket ID you entered does not exist.",
-        isWinner: false,
-        isClaimed: false,
-      });
-      setTicketStatusModalOpen(true);
+      toast.error("🚫 Ticket not found. Please check the ticket ID.");
+      setIsClaimable(false);
       return;
     }
 
-    // Case 5️⃣: Ticket successfully claimed (winning)
+    // 5️⃣ Ticket Successfully Claimed (Winner)
     if (data.status === "ticket_claimed") {
       const totalPayout = (data.matches || []).reduce(
         (sum, m) => sum + (m.payout || 0),
         0
       );
 
-      setTicketStatusData({
-        title: "🎉 Winning Ticket Claimed!",
-        message: `Congratulations! You’ve successfully claimed this ticket. Total Winning Amount: ₹${totalPayout}`,
-        isWinner: true,
-        isClaimed: true,
-        drawDate: data.drawDate,
-        drawTime: data.drawTime,
-        matches: data.matches || [],
-      });
+      toast.success(
+        `🎉 Winning ticket claimed successfully! ₹${totalPayout} credited.`
+      );
 
-      toast.success("🎉 Ticket successfully claimed!");
-      setTicketStatusModalOpen(true);
+      // disable claim button again
       setIsClaimable(false);
+
+      // refresh balance & last ticket info
+      await fetchBalanceLimit();
+
+      // clear transaction input
+      setTransactionInput("");
       return;
     }
 
-    // Fallback: unknown response
-    setTicketStatusData({
-      title: "⚠️ Unknown Response",
-      message: "Unable to determine ticket status. Please try again.",
-      isWinner: false,
-      isClaimed: false,
+    // 6️⃣ Fallback
+    toast("⚠️ Unable to determine ticket claim result. Try again.", {
+      icon: "⚠️",
     });
-    setTicketStatusModalOpen(true);
   } catch (err) {
     console.error("🔥 Error in handleClaimTicket:", err);
+
     const errMsg =
       err?.response?.data?.message ||
       err?.response?.data?.error ||
       err.message;
 
     if (err?.response?.status === 404) {
-      setTicketStatusData({
-        title: "🚫 Ticket Not Found",
-        message: "The ticket ID you entered does not exist.",
-        isWinner: false,
-        isClaimed: false,
-      });
+      toast.error("🚫 Ticket not found. Please check again.");
     } else {
-      setTicketStatusData({
-        title: "🔥 Error",
-        message: `Something went wrong: ${errMsg}`,
-        isWinner: false,
-        isClaimed: false,
-      });
+      toast.error(`🔥 Error claiming ticket: ${errMsg}`);
     }
 
-    setTicketStatusModalOpen(true);
+    setIsClaimable(false);
   }
 };
+
 
   const colKeyToIndex = { "10-19": 0, "30-39": 1, "50-59": 2 };
 
@@ -1456,7 +1476,8 @@ const handlePrint = async () => {
   const displayTotalQuantity = totalUpdatedQuantity * drawMultiplier;
   const displayTotalPoints = totalUpdatedPoints * drawMultiplier;
 
-  const canPrint = remainSecs > 30 && displayTotalQuantity > 0;
+  const canPrint = !isBlocked && remainSecs > 30 && displayTotalQuantity > 0;
+
 
 return (
   <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900" style={{ minWidth: '1400px' }}>
@@ -1533,7 +1554,7 @@ return (
             }
           }
         }}
-        className={`px-1 py-2 rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+        className={`px-1 py-2 rounded-md border-b-3 border-gray-500/30 bg-gradient-to-bl from-gray-100 to-gray-300 font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
           activeTypeFilter === btn.value
             ? `text-white bg-gradient-to-r ${btn.activeClass} shadow-lg`
             : "text-[#4A314D] bg-[#f3e7ef] hover:bg-[#ede1eb] shadow-md"
@@ -1552,7 +1573,7 @@ return (
           setActiveFPSetIndex(null);
         }
       }}
-      className={`px-2 py-1 text-sm rounded-sm font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
+      className={`px-2 py-1 text-sm rounded-md border-b-3 border-green-500/30 font-semibold transition-all duration-200 flex items-center gap-2 min-w-[80px] justify-center ${
         isFPMode
           ? "text-white bg-gradient-to-r from-green-600 to-lime-600 shadow-lg"
           : "text-[#4A314D] bg-[#ece6fc] border border-[#968edb] hover:bg-[#e5def7] shadow-md"
@@ -1645,7 +1666,7 @@ return (
             <button
               key={tab.key}
               onClick={() => handleColButton(tab.key)}
-              className={`px-2 py-1 rounded font-bold text-sm w-full text-white ${
+              className={`px-2 py-1 rounded-md border-b-4 border-purple-800/50 font-bold text-sm w-full text-white ${
                 activeFilter === tab.key
                   ? "bg-gradient-to-r from-purple-700 to-pink-600 scale-105 shadow-lg"
                   : "bg-gradient-to-r from-purple-500 to-pink-500"
@@ -1755,17 +1776,18 @@ return (
           <button
             type="button"
             onClick={handlePrint}
-            disabled={!canPrint || isPrinting}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 transition-all duration-300 hover:scale-105 active:scale-95 ${
-              !canPrint || isPrinting
-                ? "opacity-50 cursor-not-allowed pointer-events-none"
-                : ""
-            }`}
+            disabled={!canPrint || isPrinting || isBlocked}
+            className={`
+              flex-1 flex items-center justify-center gap-2 py-2 rounded-md 
+              border-b-4 border-blue-900/80 font-semibold text-white 
+              bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg 
+              hover:shadow-purple-500/25 hover:from-purple-500 hover:to-blue-400 
+              transition-all duration-300 hover:scale-105 active:scale-95
+              ${(!canPrint || isPrinting || isBlocked) ? "opacity-50 cursor-not-allowed" : ""}
+            `}
           >
-            <Printer className="w-5 h-5" />
-            {isPrinting ? "Printing..." : "Print"}
+            {isBlocked ? "Blocked" : isPrinting ? "Printing..." : "Print"}
           </button>
-
           <button
             onClick={() => {
               window.location.reload();
@@ -1774,7 +1796,7 @@ return (
               setStoreByNum({});
               localStorage.removeItem(LS_KEY);
             }}
-            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95 text-sm"
+            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-sm font-semibold text-white bg-gradient-to-r border-b-4 border-red-600/50 from-pink-500 to-red-500 shadow-lg hover:shadow-pink-500/25 hover:from-pink-400 hover:to-red-400 transition-all duration-300 hover:scale-105 active:scale-95 text-sm"
           >
             <RotateCcw className="w-5 h-5" />
             Reset (F10)
@@ -1783,22 +1805,10 @@ return (
       </div>
 
       {/* Main Table */}
-      <div className="flex-1 bg-gradient-to-b from-slate-800/70 to-slate-900/90 rounded-sm shadow-2xl border-2 border-slate-700/50 transparent-scrollbar p-4 overflow-hidden backdrop-blur-sm">
+      <div className="flex-1 bg-gradient-to-b from-slate-800/70 to-slate-900/90 rounded-sm shadow-2xl border-2 border-slate-700/50 transparent-scrollbar p-1 overflow-hidden backdrop-blur-sm">
         <div className="overflow-x-auto transparent-scrollbar">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700/50">
-                <th className="bg-transparent p-0"></th>
-                {range(0, 9).map((n) => (
-                  <th
-                    key={n}
-                    className="p-2 text-center text-sm font-bold text-purple-300 bg-slate-800/30 border-r border-slate-700/30 last:border-r-0"
-                  ></th>
-                ))}
-                <th className="bg-transparent p-2"></th>
-                <th className="bg-transparent p-2"></th>
-              </tr>
-            </thead>
+            
             <tbody>
               {/* Column Headers */}
               <tr>
@@ -1810,7 +1820,7 @@ return (
                   >
                     <input
                       type="text"
-                      className="w-16 h-6 rounded bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
+                      className="w-16 h-6  rounded bg-cyan-900/80 text-cyan-200 border-2 border-cyan-400/40 text-center font-bold shadow focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all duration-200 hover:border-cyan-300"
                       maxLength={3}
                       value={columnHeaders[col]}
                       onChange={(e) =>
@@ -1839,7 +1849,7 @@ return (
                   key={row}
                   className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors"
                 >
-                  <td className="p-1 text-center border-r border-slate-700/20">
+                  <td className=" text-center border-r border-slate-700/20">
                     <div className="text-xs text-white font-bold py-2"></div>
                     <input
                       type="text"
@@ -1980,7 +1990,7 @@ return (
                           onKeyDownCapture={(e) => handleArrowNav(e, "grid", row, col)}
                           className={`
                             w-14 h-6 rounded-sm bg-slate-900/90 text-white border-2 border-purple-600/40
-                            text-center font-bold shadow-lg focus:border-pink-500 focus:ring-2
+                            text-center font-bold  shadow-lg focus:border-pink-500 focus:ring-2
                             focus:ring-pink-500/20 outline-none transition-all duration-200
                             hover:border-purple-400
                             ${isFPHighlighted ? "fp-highlight" : ""}
@@ -2148,12 +2158,12 @@ return (
                         onChange={(e) =>
                           setTransactionInput(e.target.value)
                         }
-                        className="w-full py-1 px-5 rounded-sm bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
+                        className="w-full py-1 px-5 rounded-md bg-slate-700/90 text-white font-semibold placeholder-purple-300 border-2 border-purple-500/50 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 outline-none shadow-lg transition-all duration-200 hover:border-purple-400"
                       />
                     </div>
                     <div className="flex-none flex gap-2">
                       <button
-                        className="flex items-center gap-3 px-6 rounded-sm font-bold h-10 text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center border-b-4 border-green-700/70 gap-3 px-6 rounded-sm font-bold h-10 text-white bg-gradient-to-r from-green-600 to-lime-500 shadow-xl hover:from-lime-500 hover:to-green-600 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-green-400/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         disabled={!isClaimable}
                         onClick={handleClaimTicket}
                       >
@@ -2162,7 +2172,7 @@ return (
                       </button>
 
                       <button
-                        className="flex items-center gap-3 px-6 py-1 rounded-sm font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
+                        className="flex items-center gap-3 px-6 py-1  border-b-4 border-purple-800/80 rounded-md font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 text-sm hover:scale-105 active:scale-95 hover:shadow-purple-500/25"
                         onClick={() =>
                           setAdvanceModalOpen(true)
                         }
