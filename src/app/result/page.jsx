@@ -127,16 +127,7 @@ const Page = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <div className="max-w-7xl mx-auto pt-6 px-6">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow hover:scale-105 transition-all duration-150 hover:from-blue-700 hover:to-purple-700"
-          title="Go to Dashboard"
-        >
-          <Home className="w-5 h-5" />
-          <span className="hidden sm:inline">Home</span>
-        </Link>
-      </div>
+
 
       <div className="max-w-7xl mx-auto p-6 pt-8">
         {/* Header */}
